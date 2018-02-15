@@ -1,12 +1,12 @@
 cabal-version:       >= 1.24
 name:                publish
 version:             0.1.1
-synopsis:            Tools for publishing Markdown and Latex content
+synopsis:            Publishing tools for papers, books, and presentations
 license:             BSD3
 license-file:        LICENCE
 author:              Andrew Cowie <andrew@operationaldynamics.com>
 maintainer:          Andrew Cowie <andrew@operationaldynamics.com>
-copyright:           © 2016-2017 Operational Dynamics Consulting Pty Ltd, and Others
+copyright:           © 2016-2018 Operational Dynamics Consulting Pty Ltd, and Others
 category:            Text
 tested-with:         GHC == 8.0
 
