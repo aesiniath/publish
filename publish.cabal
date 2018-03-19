@@ -8,13 +8,14 @@ author:              Andrew Cowie <andrew@operationaldynamics.com>
 maintainer:          Andrew Cowie <andrew@operationaldynamics.com>
 copyright:           © 2016-2018 Operational Dynamics Consulting Pty Ltd, and Others
 category:            Text
-tested-with:         GHC == 8.0
+tested-with:         GHC == 8.2
 
 build-type:          Simple
 
  
 executable           render
   default-language:  Haskell2010
+  buildable:         False
 
   build-depends:     base,
                      pandoc-types,
@@ -31,6 +32,7 @@ executable           render
  
 executable           poemtabs
   default-language:  Haskell2010
+  buildable:         False
 
   build-depends:     base,
                      pandoc-types,
@@ -43,5 +45,24 @@ executable           poemtabs
 
   hs-source-dirs:    src
   main-is:           PoemTabs.hs
+
+executable           experiment
+  default-language:  Haskell2010
+  buildable:         True
+
+  build-depends:     base,
+                     text,
+                     pandoc-types,
+                     pandoc
+
+  hs-source-dirs:    tests
+
+  main-is:           Experiment.hs
+
+  ghc-options:       -threaded
+                     -Wall
+                     -Wwarn
+                     -fwarn-tabs
+
                       
 -- vim: set tabstop=21 expandtab:
