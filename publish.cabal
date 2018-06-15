@@ -1,6 +1,6 @@
 cabal-version:       >= 1.24
 name:                publish
-version:             0.1.1
+version:             0.1.2
 synopsis:            Publishing tools for papers, books, and presentations
 license:             BSD3
 license-file:        LICENCE
@@ -15,9 +15,12 @@ build-type:          Simple
  
 executable           render
   default-language:  Haskell2010
-  buildable:         False
 
   build-depends:     base,
+                     text,
+                     here,
+                     filepath,
+                     directory,
                      pandoc-types,
                      pandoc
 
