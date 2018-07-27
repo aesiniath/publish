@@ -2,8 +2,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_HADDOCK hide, not-home #-}
 
-module Main
-    ( render, main
+module RenderDocument
+    ( render
     )
 where
 
@@ -68,7 +68,3 @@ render args = do
     docs <- mapM readFragment files
     produceResult name docs
 
-main :: IO ()
-main = do
-    args <- getArgs
-    render args

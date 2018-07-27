@@ -30,7 +30,7 @@ executable           render
                      -fwarn-tabs
 
   hs-source-dirs:    src
-  main-is:           RenderDocument.hs
+  main-is:           render.hs
                       
  
 executable           poemtabs
