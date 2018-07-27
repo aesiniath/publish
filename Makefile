@@ -16,3 +16,6 @@ render:
 clean:
 	@echo -e "CLEAN\tsymlinks"
 	-rm -f render
+
+tags:
+	hasktags -c -x src tests

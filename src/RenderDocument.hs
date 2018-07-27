@@ -2,6 +2,11 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_HADDOCK hide, not-home #-}
 
+module Main
+    ( render, main
+    )
+where
+
 import Control.Monad (filterM)
 import Data.String.Here
 import Data.Text (Text)
@@ -57,12 +62,13 @@ processBookFile (file:_) = do
     possibilities = map T.unpack . filter (not . T.null)
         . filter (not . T.isPrefixOf "#") . T.lines
 
-
-main :: IO ()
-main = do
-    args <- getArgs
+render :: [String] -> IO ()
+render args = do
     (name, files) <- processBookFile args
     docs <- mapM readFragment files
     produceResult name docs
 
-    
+main :: IO ()
+main = do
+    args <- getArgs
+    render args
