@@ -1,5 +1,6 @@
-resolver: lts-11.13
+resolver: lts-12.12
 packages:
+ - /home/andrew/src/oprdyn/unbeliever
  - .
 extra-deps:
  - /home/andrew/vcs/haskell/pandoc-types
