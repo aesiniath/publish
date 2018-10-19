@@ -16,6 +16,8 @@ dependencies:
  - pandoc-types
  - pandoc
  - text
+ - unbeliever
+ - unordered-containers
 
 ghc-options: -threaded -Wall -Wwarn -fwarn-tabs
 
@@ -23,4 +25,5 @@ executables:
   render:
     source-dirs: src
     main: RenderMain.hs
-    other-modules: []
+    other-modules:
+     - RenderDocument

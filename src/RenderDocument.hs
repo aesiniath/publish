@@ -1,58 +1,53 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# OPTIONS_HADDOCK hide, not-home #-}
 
 module RenderDocument
-    ( render
+    ( program
     )
 where
 
 import Control.Monad (filterM)
-import Data.String.Here
+import Core.Program
+import Core.Text
+import Core.System
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import System.Environment (getArgs)
-import System.Exit
+import qualified Data.HashMap.Strict as HashMap
 import System.FilePath.Posix (takeBaseName)
 import System.Directory (doesFileExist)
 import Text.Pandoc
 
-readFragment :: FilePath -> IO Pandoc
-readFragment file = do
+readFragment :: FilePath -> Program None Pandoc
+readFragment file = liftIO $ do
     contents <- T.readFile file
     result <- runIOorExplode (readMarkdown def contents)
     return result
 
-produceResult :: String -> [Pandoc] -> IO ()
+produceResult :: String -> [Pandoc] -> Program None ()
 produceResult name docs =
   let
     final = mconcat docs
-  in do
+  in liftIO $ do
     result <- runIOorExplode (writeLaTeX def final)
     T.writeFile (name ++ ".latex") result
 
-usage :: IO ()
-usage = putStrLn [here|
+usage :: String
+usage = [quote|
 Usage:
 
-    publish <BookName.list>"
+    publish <BookName.list>
 
-where BookName will be used as the base name for the intermediate .latex file
-and the final output .pdf file. The list file should contain filenames, one per
-line, of the fragments you wish to render into a complete document.
+where 'BookName' will be used as the base name for the intermediate
+.latex file and the final output .pdf file. The list file should
+contain filenames, one per line, of the fragments you wish to render
+into a complete document.
 |]
 
-processBookFile :: [String] -> IO (String, [FilePath])
-processBookFile [] = do
-    putStrLn "Error: No book file specified"
-    usage
-    return ("",[])
-processBookFile (file:_) = do
+processBookFile :: FilePath -> Program None (String, [FilePath])
+processBookFile file = liftIO $ do
     contents <- T.readFile file
-
     files <- filterM doesFileExist (possibilities contents)
-
     return (base, files)
   where
     base = takeBaseName file -- "/directory/file.ext" -> "file"
@@ -62,9 +57,32 @@ processBookFile (file:_) = do
     possibilities = map T.unpack . filter (not . T.null)
         . filter (not . T.isPrefixOf "#") . T.lines
 
-render :: [String] -> IO ()
-render args = do
-    (name, files) <- processBookFile args
+-- this seems like it should be a standard utility function, lookupArgument
+-- or something? Would prevent HashMap from leaking
+
+extractBookFile :: Parameters -> Program None FilePath
+extractBookFile params =
+    case HashMap.lookup "bookfile" (parameterValuesFrom params) of
+        Just value -> case value of
+            Value bookfile -> return bookfile
+            Empty -> invalid
+        Nothing -> do
+            throw NoFileSpecified
+
+invalid :: a
+invalid = error "Invalid State"
+
+data UsageErrors
+    = NoFileSpecified
+    deriving Show
+
+instance Exception UsageErrors
+
+program :: Program None ()
+program = do
+    params <- getCommandLine
+    bookfile <- extractBookFile params
+    (name, files) <- processBookFile bookfile
     docs <- mapM readFragment files
     produceResult name docs
 

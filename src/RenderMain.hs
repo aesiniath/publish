@@ -1,9 +1,8 @@
 module Main where
 
-import RenderDocument (render)
-import System.Environment (getArgs)
+import Core.Program
+import RenderDocument (program)
+
 
 main :: IO ()
-main = do
-    args <- getArgs
-    render args
+main = execute program
