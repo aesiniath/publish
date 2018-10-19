@@ -61,16 +61,7 @@ processBookFile file = liftIO $ do
 -- or something? Would prevent HashMap from leaking
 
 extractBookFile :: Parameters -> Program None FilePath
-extractBookFile params =
-    case HashMap.lookup "bookfile" (parameterValuesFrom params) of
-        Just value -> case value of
-            Value bookfile -> return bookfile
-            Empty -> invalid
-        Nothing -> do
-            throw NoFileSpecified
-
-invalid :: a
-invalid = error "Invalid State"
+extractBookFile params = return (lookupArgument "bookfile" params)
 
 data UsageErrors
     = NoFileSpecified
