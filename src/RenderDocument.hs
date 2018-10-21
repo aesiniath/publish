@@ -30,9 +30,12 @@ produceResult :: String -> [Pandoc] -> Program None ()
 produceResult name docs =
   let
     final = mconcat docs
-  in liftIO $ do
-    result <- runIOorExplode (writeLaTeX def final)
-    T.writeFile (name ++ ".latex") result
+    target = name ++ ".latex"
+  in do
+    debugS "target" target
+    liftIO $ do
+        result <- runIOorExplode (writeLaTeX def final)
+        T.writeFile target result
 
 usage :: String
 usage = [quote|
@@ -85,5 +88,7 @@ program = do
 
     event "Reading pieces"
     docs <- mapM readFragment files
+
+    event "Write output"
     produceResult name docs
 
