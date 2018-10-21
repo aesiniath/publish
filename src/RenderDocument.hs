@@ -19,10 +19,12 @@ import System.Directory (doesFileExist)
 import Text.Pandoc
 
 readFragment :: FilePath -> Program None Pandoc
-readFragment file = liftIO $ do
-    contents <- T.readFile file
-    result <- runIOorExplode (readMarkdown def contents)
-    return result
+readFragment file = do
+    debugS "fragment" file
+    liftIO $ do
+        contents <- T.readFile file
+        result <- runIOorExplode (readMarkdown def contents)
+        return result
 
 produceResult :: String -> [Pandoc] -> Program None ()
 produceResult name docs =
@@ -45,10 +47,12 @@ into a complete document.
 |]
 
 processBookFile :: FilePath -> Program None (String, [FilePath])
-processBookFile file = liftIO $ do
-    contents <- T.readFile file
-    files <- filterM doesFileExist (possibilities contents)
-    return (base, files)
+processBookFile file = do
+    debugS "bookfile" file
+    liftIO $ do
+        contents <- T.readFile file
+        files <- filterM doesFileExist (possibilities contents)
+        return (base, files)
   where
     base = takeBaseName file -- "/directory/file.ext" -> "file"
 
@@ -76,7 +80,10 @@ instance Exception UsageErrors
 program :: Program None ()
 program = do
     bookfile <- extractBookFile
+    event "Reading bookfile"
     (name, files) <- processBookFile bookfile
+
+    event "Reading pieces"
     docs <- mapM readFragment files
     produceResult name docs
 
