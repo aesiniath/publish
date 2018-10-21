@@ -1,4 +1,4 @@
-:set -isrc:tests
+:set -i/home/andrew/src/oprdyn/unbeliever/lib:src:tests
 :set -XOverloadedStrings
 
 import Data.Text (Text)
