@@ -60,8 +60,12 @@ processBookFile file = liftIO $ do
 -- this seems like it should be a standard utility function, lookupArgument
 -- or something? Would prevent HashMap from leaking
 
-extractBookFile :: Parameters -> Program None FilePath
-extractBookFile params = return (lookupArgument "bookfile" params)
+extractBookFile :: Program None FilePath
+extractBookFile = do
+    params <- getCommandLine
+    case lookupArgument "bookfile" params of
+        Nothing -> invalid
+        Just bookfile -> return bookfile
 
 data UsageErrors
     = NoFileSpecified
@@ -71,8 +75,7 @@ instance Exception UsageErrors
 
 program :: Program None ()
 program = do
-    params <- getCommandLine
-    bookfile <- extractBookFile params
+    bookfile <- extractBookFile
     (name, files) <- processBookFile bookfile
     docs <- mapM readFragment files
     produceResult name docs
