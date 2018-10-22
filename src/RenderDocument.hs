@@ -64,9 +64,6 @@ processBookFile file = do
     possibilities = map T.unpack . filter (not . T.null)
         . filter (not . T.isPrefixOf "#") . T.lines
 
--- this seems like it should be a standard utility function, lookupArgument
--- or something? Would prevent HashMap from leaking
-
 extractBookFile :: Program None FilePath
 extractBookFile = do
     params <- getCommandLine
@@ -91,4 +88,6 @@ program = do
 
     event "Write output"
     produceResult name docs
+
+    event "Complete"
 
