@@ -1,5 +1,6 @@
-resolver: lts-11.13
+resolver: lts-12.12
 packages:
+ - /home/andrew/src/oprdyn/unbeliever
  - .
 extra-deps:
  - /home/andrew/vcs/haskell/pandoc-types
@@ -9,4 +10,6 @@ extra-deps:
  - skylighting-core-0.7.2
  - texmath-0.11.0.1
 
+build:
+  haddock: false
 

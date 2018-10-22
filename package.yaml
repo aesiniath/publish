@@ -1,0 +1,29 @@
+name: publish
+version:  0.1.3
+synopsis: Publishing tools for papers, books, and presentations
+license: BSD3
+license-file: LICENCE
+author: Andrew Cowie <andrew@operationaldynamics.com>
+maintainer: Andrew Cowie <andrew@operationaldynamics.com>
+copyright: © 2016-2018 Operational Dynamics Consulting Pty Ltd, and Others
+category: Text
+tested-with: GHC == 8.4
+
+dependencies:
+ - base
+ - directory
+ - filepath
+ - pandoc-types
+ - pandoc
+ - text
+ - unbeliever
+ - unordered-containers
+
+ghc-options: -threaded -Wall -Wwarn -fwarn-tabs
+
+executables:
+  render:
+    source-dirs: src
+    main: RenderMain.hs
+    other-modules:
+     - RenderDocument
