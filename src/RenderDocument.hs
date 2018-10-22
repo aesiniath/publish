@@ -37,18 +37,6 @@ produceResult name docs =
         result <- runIOorExplode (writeLaTeX def final)
         T.writeFile target result
 
-usage :: String
-usage = [quote|
-Usage:
-
-    publish <BookName.list>
-
-where 'BookName' will be used as the base name for the intermediate
-.latex file and the final output .pdf file. The list file should
-contain filenames, one per line, of the fragments you wish to render
-into a complete document.
-|]
-
 processBookFile :: FilePath -> Program None (String, [FilePath])
 processBookFile file = do
     debugS "bookfile" file
