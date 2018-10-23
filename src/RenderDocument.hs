@@ -16,7 +16,14 @@ import qualified Data.Text.IO as T
 import qualified Data.HashMap.Strict as HashMap
 import System.FilePath.Posix (takeBaseName)
 import System.Directory (doesFileExist)
+import System.Posix.Temp (mkdtemp)
 import Text.Pandoc
+
+temporaryBuildDir :: Program None FilePath
+temporaryBuildDir = do
+    dirname <- liftIO $ mkdtemp "/tmp/publish-"
+    debugS "tmpdir" dirname
+    return dirname
 
 readFragment :: FilePath -> Program None Pandoc
 readFragment file = do
@@ -75,6 +82,7 @@ program = do
     docs <- mapM readFragment files
 
     event "Write output"
+    tmp <- temporaryBuildDir
     produceResult name docs
 
     event "Complete"

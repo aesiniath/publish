@@ -17,6 +17,7 @@ dependencies:
  - pandoc
  - text
  - unbeliever
+ - unix
  - unordered-containers
 
 ghc-options: -threaded -Wall -Wwarn -fwarn-tabs
