@@ -33,11 +33,11 @@ readFragment file = do
         result <- runIOorExplode (readMarkdown def contents)
         return result
 
-produceResult :: String -> [Pandoc] -> Program None ()
-produceResult name docs =
+produceResult :: FilePath -> String -> [Pandoc] -> Program None ()
+produceResult tmpdir name docs =
   let
     final = mconcat docs
-    target = name ++ ".latex"
+    target = tmpdir ++ "/" ++ name ++ ".latex"
   in do
     debugS "target" target
     liftIO $ do
@@ -83,7 +83,7 @@ program = do
 
     event "Write output"
     tmp <- temporaryBuildDir
-    produceResult name docs
+    produceResult tmp name docs
 
     event "Complete"
 
