@@ -16,6 +16,7 @@ dependencies:
  - pandoc-types
  - pandoc
  - text
+ - typed-process
  - unbeliever
  - unix
  - unordered-containers

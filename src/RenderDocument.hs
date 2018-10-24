@@ -16,6 +16,7 @@ import qualified Data.HashMap.Strict as HashMap
 import System.FilePath.Posix (takeBaseName)
 import System.Directory (doesFileExist)
 import System.Posix.Temp (mkdtemp)
+import System.Process.Typed (proc, runProcess_, setStdin, closed)
 import Text.Pandoc
 
 program :: Program None ()
@@ -30,6 +31,9 @@ program = do
     event "Write intermediate"
     tmp <- temporaryBuildDir
     produceResult tmp name docs
+
+    event "Render document"
+    renderPDF tmp name
 
     event "Complete"
 
@@ -79,3 +83,27 @@ produceResult tmpdir name docs =
     liftIO $ do
         result <- runIOorExplode (writeLaTeX def final)
         T.writeFile target result
+
+renderPDF :: FilePath -> String -> Program None ()
+renderPDF tmpdir name =
+  let
+    latex = tmpdir ++ "/" ++ name ++ ".latex"
+    output = tmpdir ++ "/" ++ name ++ ".pdf"
+
+    latexmk = proc "latexmk"
+        [ "-xelatex"
+        , "-output-directory=" ++ tmpdir
+        , "-interaction=nonstopmode"
+        , "-halt-on-error"
+        , "-file-line-error"
+        , latex
+        ]
+    copy = proc "cp"
+        [ output
+        , "."
+        ]
+  in do
+    debugS "output" output
+    liftIO $ do
+        runProcess_ (setStdin closed latexmk)
+        runProcess_ (setStdin closed copy)
