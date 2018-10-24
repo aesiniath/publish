@@ -8,7 +8,6 @@ where
 
 import Control.Monad (filterM)
 import Core.Program
-import Core.Text
 import Core.System
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -19,30 +18,27 @@ import System.Directory (doesFileExist)
 import System.Posix.Temp (mkdtemp)
 import Text.Pandoc
 
-temporaryBuildDir :: Program None FilePath
-temporaryBuildDir = do
-    dirname <- liftIO $ mkdtemp "/tmp/publish-"
-    debugS "tmpdir" dirname
-    return dirname
+program :: Program None ()
+program = do
+    bookfile <- extractBookFile
+    event "Reading bookfile"
+    (name, files) <- processBookFile bookfile
 
-readFragment :: FilePath -> Program None Pandoc
-readFragment file = do
-    debugS "fragment" file
-    liftIO $ do
-        contents <- T.readFile file
-        result <- runIOorExplode (readMarkdown def contents)
-        return result
+    event "Reading pieces"
+    docs <- mapM readFragment files
 
-produceResult :: FilePath -> String -> [Pandoc] -> Program None ()
-produceResult tmpdir name docs =
-  let
-    final = mconcat docs
-    target = tmpdir ++ "/" ++ name ++ ".latex"
-  in do
-    debugS "target" target
-    liftIO $ do
-        result <- runIOorExplode (writeLaTeX def final)
-        T.writeFile target result
+    event "Write intermediate"
+    tmp <- temporaryBuildDir
+    produceResult tmp name docs
+
+    event "Complete"
+
+extractBookFile :: Program None FilePath
+extractBookFile = do
+    params <- getCommandLine
+    case lookupArgument "bookfile" params of
+        Nothing -> invalid
+        Just bookfile -> return bookfile
 
 processBookFile :: FilePath -> Program None (String, [FilePath])
 processBookFile file = do
@@ -59,31 +55,27 @@ processBookFile file = do
     possibilities = map T.unpack . filter (not . T.null)
         . filter (not . T.isPrefixOf "#") . T.lines
 
-extractBookFile :: Program None FilePath
-extractBookFile = do
-    params <- getCommandLine
-    case lookupArgument "bookfile" params of
-        Nothing -> invalid
-        Just bookfile -> return bookfile
+readFragment :: FilePath -> Program None Pandoc
+readFragment file = do
+    debugS "fragment" file
+    liftIO $ do
+        contents <- T.readFile file
+        result <- runIOorExplode (readMarkdown def contents)
+        return result
 
-data UsageErrors
-    = NoFileSpecified
-    deriving Show
+temporaryBuildDir :: Program None FilePath
+temporaryBuildDir = do
+    dirname <- liftIO $ mkdtemp "/tmp/publish-"
+    debugS "tmpdir" dirname
+    return dirname
 
-instance Exception UsageErrors
-
-program :: Program None ()
-program = do
-    bookfile <- extractBookFile
-    event "Reading bookfile"
-    (name, files) <- processBookFile bookfile
-
-    event "Reading pieces"
-    docs <- mapM readFragment files
-
-    event "Write output"
-    tmp <- temporaryBuildDir
-    produceResult tmp name docs
-
-    event "Complete"
-
+produceResult :: FilePath -> String -> [Pandoc] -> Program None ()
+produceResult tmpdir name docs =
+  let
+    final = mconcat docs
+    target = tmpdir ++ "/" ++ name ++ ".latex"
+  in do
+    debugS "target" target
+    liftIO $ do
+        result <- runIOorExplode (writeLaTeX def final)
+        T.writeFile target result
