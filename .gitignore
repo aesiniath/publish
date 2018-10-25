@@ -1,3 +1,10 @@
+# build artifacts
 /.stack-work/
 /tags
 /publish.cabal
+
+# symlinks to executables
+/render
+
+# runtime debris
+/.publish
