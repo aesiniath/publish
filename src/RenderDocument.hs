@@ -82,13 +82,13 @@ setupTargetFile name = do
             writeFile dotfile (dir ++ "\n")
             return dir
         )
-
     debugS "tmpdir" tmpdir
 
-    let target = tmpdir ++ "/" ++ base ++ ".latex"
+    let target = tmpdir ++ "/" ++ base ++ ".tex"
         result = tmpdir ++ "/" ++ base ++ ".pdf"
 
     handle <- liftIO (openBinaryFile target WriteMode)
+    debugS "target" target
 
     liftIO $ hWrite handle preamble
 
@@ -162,6 +162,7 @@ renderPDF = do
         tmpdir = tempDirectoryFrom env
 
         latexmk = proc "latexmk"
+
             [ "-xelatex"
             , "-output-directory=" ++ tmpdir
             , "-interaction=nonstopmode"
@@ -179,10 +180,12 @@ copyHere = do
     env <- getApplicationState
     let result = resultFilenameFrom env
         final = takeFileName result             -- ie ./Book.pdf
-    liftIO $ do
+    withContext $ \runProgram -> do
         time1 <- getModificationTime result
         exists <- doesFileExist final
         time2 <- if exists
             then getModificationTime final
             else getModificationTime "/proc"    -- boot time!
-        when (time1 > time2) (copyFileWithMetadata result final)
+        when (time1 > time2) $ do
+            runProgram (debugS "final" final)
+            copyFileWithMetadata result final
