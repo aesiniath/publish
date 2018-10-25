@@ -14,7 +14,7 @@ import Core.Text
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import System.Directory (doesFileExist)
+import System.Directory (doesFileExist, doesDirectoryExist)
 import System.FilePath.Posix (takeBaseName)
 import System.IO (openBinaryFile, IOMode(WriteMode), hClose)
 import System.Posix.Temp (mkdtemp)
@@ -60,15 +60,48 @@ extractBookFile = do
         Just bookfile -> return bookfile
 
 setupTargetFile :: FilePath -> Program Env ()
-setupTargetFile name = do
-    tmpdir <- temporaryBuildDir
+setupTargetFile name =
+  let
+    dotfile = ".publish"
+  in do
+    tmpdir <- liftIO $ do
+        probe1 <- doesFileExist dotfile
+        if probe1
+            then do
+                dir <- readFile dotfile
+                probe2 <- doesDirectoryExist dir
+                if probe2
+                    then return dir
+                    else do
+                        dir' <- mkdtemp "/tmp/publish-"
+                        writeFile dotfile dir'
+                        return dir
+            else do
+                dir <- mkdtemp "/tmp/publish-"
+                writeFile dotfile dir
+                return dir
+
+    debugS "tmpdir" tmpdir
 
     let target = tmpdir ++ "/" ++ base ++ ".latex"
         result = tmpdir ++ "/" ++ base ++ ".pdf"
 
     handle <- liftIO (openBinaryFile target WriteMode)
 
-    liftIO $ hWrite handle [quote|
+    liftIO $ hWrite handle preamble
+
+    let env = Env
+            { targetHandleFrom = handle
+            , targetFilenameFrom = target
+            , resultFilenameFrom = result
+            , tempDirectoryFrom = tmpdir
+            }
+    setApplicationState env
+  where
+    base = takeBaseName name -- "/directory/file.ext" -> "file"
+
+preamble :: Rope
+preamble = [quote|
 \documentclass[12pt,a4paper,openany]{memoir}
 
 %
@@ -139,16 +172,6 @@ setupTargetFile name = do
 \begin{document}
 |]
 
-    let env = Env
-            { targetHandleFrom = handle
-            , targetFilenameFrom = target
-            , resultFilenameFrom = result
-            , tempDirectoryFrom = tmpdir
-            }
-    setApplicationState env
-  where
-    base = takeBaseName name -- "/directory/file.ext" -> "file"
-
 processBookFile :: FilePath -> Program Env [FilePath]
 processBookFile file = do
     debugS "bookfile" file
@@ -181,12 +204,6 @@ processFragment file = do
         -- whitespace from the block, resulting in a no paragraph boundary
         -- between files. So gratuitously add a break
         T.hPutStr handle "\n"
-
-temporaryBuildDir :: Program Env FilePath
-temporaryBuildDir = do
-    dirname <- liftIO $ mkdtemp "/tmp/publish-"
-    debugS "tmpdir" dirname
-    return dirname
 
 -- finish file
 produceResult :: Program Env ()
