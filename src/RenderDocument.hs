@@ -10,37 +10,42 @@ where
 import Control.Monad (filterM)
 import Core.Program
 import Core.System
+import Core.Text
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.HashMap.Strict as HashMap
-import System.FilePath.Posix (takeBaseName)
 import System.Directory (doesFileExist)
+import System.FilePath.Posix (takeBaseName)
+import System.IO (openBinaryFile, IOMode(WriteMode), hClose)
 import System.Posix.Temp (mkdtemp)
 import System.Process.Typed (proc, runProcess_, setStdin, closed)
 import Text.Pandoc
 
 data Env = Env
-    { targetFileFrom :: FilePath
-    , outputFileFrom :: FilePath
+    { targetHandleFrom :: Handle
+    , targetFilenameFrom :: FilePath
+    , outputFilenameFrom :: FilePath
     , tempDirectoryFrom :: FilePath
     }
 
-initial = Env "" "" ""
+initial = Env stdout "" "" ""
 
 program :: Program Env ()
 program = do
     bookfile <- extractBookFile
-    populateEnvironment bookfile
 
     event "Reading bookfile"
     files <- processBookFile bookfile
 
-    event "Reading pieces"
-    docs <- mapM readFragment files
+    event "Setup intermediate target"
+    setupTargetFile bookfile
+
+    event "Converting pieces"
+    mapM_ processFragment files
 
     event "Write intermediate"
-    produceResult docs
+    produceResult
 
     event "Render document"
     renderPDF
@@ -54,19 +59,95 @@ extractBookFile = do
         Nothing -> invalid
         Just bookfile -> return bookfile
 
-populateEnvironment :: FilePath -> Program Env ()
-populateEnvironment file = do
+setupTargetFile :: FilePath -> Program Env ()
+setupTargetFile name = do
     tmpdir <- temporaryBuildDir
 
+    let target = tmpdir ++ "/" ++ base ++ ".latex"
+        output = tmpdir ++ "/" ++ base ++ ".pdf"
+
+    handle <- liftIO (openBinaryFile target WriteMode)
+
+    liftIO $ hWrite handle [quote|
+\documentclass[12pt,a4paper,openany]{memoir}
+
+%
+% Load the TeX Gyre project's "Heros" font, which is an upgrade of URW's
+% lovely "Nimbus Sans L" sans-serif font.
+%
+
+\usepackage{fontspec}
+\setmainfont{Linux Libertine O}
+\setsansfont{TeX Gyre Heros}[Scale=MatchLowercase]
+\setmonofont{Inconsolata}[Scale=MatchLowercase]
+
+%\usepackage[showframe, pass]{geometry}
+
+% use upquote for straight quotes in verbatim environments
+\usepackage{upquote}
+
+% use microtype
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+
+%
+% Customize paper size. Or not: A4 paper is 597pt x 845pt. 4:3 aka 768x1024
+% screen is 597pt x 796pt, but 16:9 aka 2560x1440 screen is 597pt x 1062pt. A4
+% in landscape is a fair way narrower.
+%
+
+\setlrmarginsandblock{2cm}{2.5cm}{*}
+\setulmarginsandblock{2cm}{2cm}{*}
+
+%
+% Setting the \footskip parameter is how you control the bottom margin width,
+% not "setting the bottom margin" since the typeblock will be set to be an
+% integer multiple of \baselineskip.
+%
+
+\setheadfoot{0pt}{25pt}
+\setheaderspaces{1cm}{*}{*}
+
+\checkandfixthelayout[classic]
+
+\usepackage{graphicx,grffile}
+
+\usepackage{longtable}
+
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+
+\usepackage[hidelinks]{hyperref}
+
+\SingleSpacing
+\traditionalparskip
+\setlength{\parindent}{0em}
+
+%
+% Customize the section heading fonts to use this accordingly.
+%
+
+\chapterstyle{article}
+\setsecnumdepth{none}
+
+% FIXME Why isn't the \Huge font size command working?
+\renewcommand{\chaptitlefont}{\Large\sffamily\bfseries}
+
+\setsecheadstyle{\large\sffamily}
+\setsubsecheadstyle{\normalsize\sffamily\bfseries}
+\setsubsubsecheadstyle{\normalsize\rmfamily\itshape}
+
+\begin{document}
+|]
+
     let env = Env
-            { targetFileFrom = tmpdir ++ "/" ++ base ++ ".latex"
-            , outputFileFrom = tmpdir ++ "/" ++ base ++ ".pdf"
+            { targetHandleFrom = handle
+            , targetFilenameFrom = target
+            , outputFilenameFrom = output
             , tempDirectoryFrom = tmpdir
             }
-
     setApplicationState env
   where
-    base = takeBaseName file -- "/directory/file.ext" -> "file"
+    base = takeBaseName name -- "/directory/file.ext" -> "file"
 
 processBookFile :: FilePath -> Program Env [FilePath]
 processBookFile file = do
@@ -82,13 +163,20 @@ processBookFile file = do
     possibilities = map T.unpack . filter (not . T.null)
         . filter (not . T.isPrefixOf "#") . T.lines
 
-readFragment :: FilePath -> Program Env Pandoc
-readFragment file = do
+processFragment :: FilePath -> Program Env ()
+processFragment file = do
+    env <- getApplicationState
+    let handle = targetHandleFrom env
+
     debugS "fragment" file
     liftIO $ do
         contents <- T.readFile file
-        result <- runIOorExplode (readMarkdown def contents)
-        return result
+        result <- runIOorExplode $ do
+            parsed <- readMarkdown def contents
+            writeLaTeX def parsed
+
+        T.hPutStrLn handle result
+        T.hPutStrLn handle "\n"
 
 temporaryBuildDir :: Program Env FilePath
 temporaryBuildDir = do
@@ -96,24 +184,24 @@ temporaryBuildDir = do
     debugS "tmpdir" dirname
     return dirname
 
-produceResult :: [Pandoc] -> Program Env ()
-produceResult docs =
-  let
-    final = mconcat docs
-  in do
+-- finish file
+produceResult :: Program Env ()
+produceResult = do
     env <- getApplicationState
-    let target = targetFileFrom env
-    debugS "target" target
+    let handle = targetHandleFrom env
     liftIO $ do
-        result <- runIOorExplode (writeLaTeX def final)
-        T.writeFile target result
+        hWrite handle [quote|
+\end{document}
+        |]
+        hClose handle
+
 
 renderPDF :: Program Env ()
 renderPDF = do
     env <- getApplicationState
 
-    let latex  = targetFileFrom env
-        output = outputFileFrom env
+    let target = targetFilenameFrom env
+        output = outputFilenameFrom env
         tmpdir = tempDirectoryFrom env
 
         latexmk = proc "latexmk"
@@ -122,7 +210,7 @@ renderPDF = do
             , "-interaction=nonstopmode"
             , "-halt-on-error"
             , "-file-line-error"
-            , latex
+            , target
             ]
         copy = proc "cp"
             [ output
