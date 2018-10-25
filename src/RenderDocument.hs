@@ -14,7 +14,6 @@ import Core.Text
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import qualified Data.HashMap.Strict as HashMap
 import System.Directory (doesFileExist)
 import System.FilePath.Posix (takeBaseName)
 import System.IO (openBinaryFile, IOMode(WriteMode), hClose)
@@ -25,10 +24,11 @@ import Text.Pandoc
 data Env = Env
     { targetHandleFrom :: Handle
     , targetFilenameFrom :: FilePath
-    , outputFilenameFrom :: FilePath
+    , resultFilenameFrom :: FilePath
     , tempDirectoryFrom :: FilePath
     }
 
+initial :: Env
 initial = Env stdout "" "" ""
 
 program :: Program Env ()
@@ -64,7 +64,7 @@ setupTargetFile name = do
     tmpdir <- temporaryBuildDir
 
     let target = tmpdir ++ "/" ++ base ++ ".latex"
-        output = tmpdir ++ "/" ++ base ++ ".pdf"
+        result = tmpdir ++ "/" ++ base ++ ".pdf"
 
     handle <- liftIO (openBinaryFile target WriteMode)
 
@@ -142,7 +142,7 @@ setupTargetFile name = do
     let env = Env
             { targetHandleFrom = handle
             , targetFilenameFrom = target
-            , outputFilenameFrom = output
+            , resultFilenameFrom = result
             , tempDirectoryFrom = tmpdir
             }
     setApplicationState env
@@ -171,12 +171,16 @@ processFragment file = do
     debugS "fragment" file
     liftIO $ do
         contents <- T.readFile file
-        result <- runIOorExplode $ do
+        latex <- runIOorExplode $ do
             parsed <- readMarkdown def contents
             writeLaTeX def parsed
 
-        T.hPutStrLn handle result
-        T.hPutStrLn handle "\n"
+        T.hPutStrLn handle latex
+
+        -- for some reason, the Markdown -> LaTeX pair strips trailing
+        -- whitespace from the block, resulting in a no paragraph boundary
+        -- between files. So gratuitously add a break
+        T.hPutStr handle "\n"
 
 temporaryBuildDir :: Program Env FilePath
 temporaryBuildDir = do
@@ -201,7 +205,7 @@ renderPDF = do
     env <- getApplicationState
 
     let target = targetFilenameFrom env
-        output = outputFilenameFrom env
+        result = resultFilenameFrom env
         tmpdir = tempDirectoryFrom env
 
         latexmk = proc "latexmk"
@@ -213,11 +217,11 @@ renderPDF = do
             , target
             ]
         copy = proc "cp"
-            [ output
+            [ result
             , "."
             ]
 
-    debugS "output" output
+    debugS "result" result
     liftIO $ do
         runProcess_ (setStdin closed latexmk)
         runProcess_ (setStdin closed copy)
