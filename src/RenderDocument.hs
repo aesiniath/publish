@@ -7,7 +7,7 @@ module RenderDocument
     )
 where
 
-import Control.Monad (filterM)
+import Control.Monad (filterM, when)
 import Core.Program
 import Core.System
 import Core.Text
@@ -16,13 +16,14 @@ import Data.List (dropWhileEnd)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import System.Directory (doesFileExist, doesDirectoryExist)
-import System.FilePath.Posix (takeBaseName)
+import System.Directory (doesFileExist, doesDirectoryExist
+    , getModificationTime, copyFileWithMetadata)
+import System.FilePath.Posix (takeBaseName, takeFileName)
 import System.IO (openBinaryFile, IOMode(WriteMode), hClose)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
 import System.Process.Typed (proc, runProcess_, setStdin, closed)
-import Text.Pandoc
+import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def)
 
 import LatexPreamble (preamble, ending)
 
@@ -54,6 +55,7 @@ program = do
 
     event "Render document to PDF"
     renderPDF
+    copyHere
 
     event "Complete"
 
@@ -167,12 +169,20 @@ renderPDF = do
             , "-file-line-error"
             , target
             ]
-        copy = proc "cp"
-            [ result
-            , "."
-            ]
 
     debugS "result" result
     liftIO $ do
         runProcess_ (setStdin closed latexmk)
-        runProcess_ (setStdin closed copy)
+
+copyHere :: Program Env ()
+copyHere = do
+    env <- getApplicationState
+    let result = resultFilenameFrom env
+        final = takeFileName result             -- ie ./Book.pdf
+    liftIO $ do
+        time1 <- getModificationTime result
+        exists <- doesFileExist final
+        time2 <- if exists
+            then getModificationTime final
+            else getModificationTime "/proc"    -- boot time!
+        when (time1 > time2) (copyFileWithMetadata result final)
