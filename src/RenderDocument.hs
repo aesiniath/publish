@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module RenderDocument
     ( program
@@ -17,6 +18,7 @@ import qualified Data.Text.IO as T
 import System.Directory (doesFileExist, doesDirectoryExist)
 import System.FilePath.Posix (takeBaseName)
 import System.IO (openBinaryFile, IOMode(WriteMode), hClose)
+import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
 import System.Process.Typed (proc, runProcess_, setStdin, closed)
 import Text.Pandoc
@@ -29,7 +31,7 @@ data Env = Env
     }
 
 initial :: Env
-initial = Env stdout "" "" ""
+initial = Env undefined "" "" ""
 
 program :: Program Env ()
 program = do
@@ -38,16 +40,16 @@ program = do
     event "Reading bookfile"
     files <- processBookFile bookfile
 
-    event "Setup intermediate target"
+    event "Setup temporary directory"
     setupTargetFile bookfile
 
-    event "Converting pieces"
+    event "Convert Markdown pieces to LaTeX"
     mapM_ processFragment files
 
-    event "Write intermediate"
+    event "Write intermediate LaTeX file"
     produceResult
 
-    event "Render document"
+    event "Render document to PDF"
     renderPDF
 
     event "Complete"
@@ -61,16 +63,20 @@ extractBookFile = do
 
 setupTargetFile :: FilePath -> Program Env ()
 setupTargetFile name = do
-    tmpdir <- liftIO $ do
-        probe1 <- doesFileExist dotfile
-        if probe1
-            then do
-                dir <- readFile dotfile
-                probe2 <- doesDirectoryExist dir
-                if probe2
-                    then return dir
-                    else mkdir
-            else mkdir
+    tmpdir <- liftIO $ catch
+        (do
+            dir <- readFile dotfile
+            probe <- doesDirectoryExist dir
+            if probe
+                then return dir
+                else throw boom
+        )
+        (\(e :: IOError) -> do
+            dir <- mkdtemp "/tmp/publish-"
+            writeFile dotfile dir
+            return dir
+        )
+
 
     debugS "tmpdir" tmpdir
 
@@ -93,10 +99,7 @@ setupTargetFile name = do
 
     base = takeBaseName name -- "/directory/file.ext" -> "file"
 
-    mkdir = do
-        dir <- mkdtemp "/tmp/publish-"
-        writeFile dotfile dir
-        return dir
+    boom = userError "Temp dir no longer present"
 
 preamble :: Rope
 preamble = [quote|
