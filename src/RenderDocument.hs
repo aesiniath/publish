@@ -3,6 +3,7 @@
 
 module RenderDocument
     ( program
+    , initial
     )
 where
 
@@ -19,47 +20,69 @@ import System.Posix.Temp (mkdtemp)
 import System.Process.Typed (proc, runProcess_, setStdin, closed)
 import Text.Pandoc
 
-program :: Program None ()
+data Env = Env
+    { targetFileFrom :: FilePath
+    , outputFileFrom :: FilePath
+    , tempDirectoryFrom :: FilePath
+    }
+
+initial = Env "" "" ""
+
+program :: Program Env ()
 program = do
     bookfile <- extractBookFile
+    populateEnvironment bookfile
+
     event "Reading bookfile"
-    (name, files) <- processBookFile bookfile
+    files <- processBookFile bookfile
 
     event "Reading pieces"
     docs <- mapM readFragment files
 
     event "Write intermediate"
-    tmp <- temporaryBuildDir
-    produceResult tmp name docs
+    produceResult docs
 
     event "Render document"
-    renderPDF tmp name
+    renderPDF
 
     event "Complete"
 
-extractBookFile :: Program None FilePath
+extractBookFile :: Program Env FilePath
 extractBookFile = do
     params <- getCommandLine
     case lookupArgument "bookfile" params of
         Nothing -> invalid
         Just bookfile -> return bookfile
 
-processBookFile :: FilePath -> Program None (String, [FilePath])
-processBookFile file = do
-    debugS "bookfile" file
-    liftIO $ do
-        contents <- T.readFile file
-        files <- filterM doesFileExist (possibilities contents)
-        return (base, files)
+populateEnvironment :: FilePath -> Program Env ()
+populateEnvironment file = do
+    tmpdir <- temporaryBuildDir
+
+    let env = Env
+            { targetFileFrom = tmpdir ++ "/" ++ base ++ ".latex"
+            , outputFileFrom = tmpdir ++ "/" ++ base ++ ".pdf"
+            , tempDirectoryFrom = tmpdir
+            }
+
+    setApplicationState env
   where
     base = takeBaseName file -- "/directory/file.ext" -> "file"
 
+processBookFile :: FilePath -> Program Env [FilePath]
+processBookFile file = do
+    debugS "bookfile" file
+    files <- liftIO $ do
+        contents <- T.readFile file
+        filterM doesFileExist (possibilities contents)
+
+    return files
+  where
     -- filter out blank lines and lines commented out
     possibilities :: Text -> [FilePath]
     possibilities = map T.unpack . filter (not . T.null)
         . filter (not . T.isPrefixOf "#") . T.lines
 
-readFragment :: FilePath -> Program None Pandoc
+readFragment :: FilePath -> Program Env Pandoc
 readFragment file = do
     debugS "fragment" file
     liftIO $ do
@@ -67,42 +90,45 @@ readFragment file = do
         result <- runIOorExplode (readMarkdown def contents)
         return result
 
-temporaryBuildDir :: Program None FilePath
+temporaryBuildDir :: Program Env FilePath
 temporaryBuildDir = do
     dirname <- liftIO $ mkdtemp "/tmp/publish-"
     debugS "tmpdir" dirname
     return dirname
 
-produceResult :: FilePath -> String -> [Pandoc] -> Program None ()
-produceResult tmpdir name docs =
+produceResult :: [Pandoc] -> Program Env ()
+produceResult docs =
   let
     final = mconcat docs
-    target = tmpdir ++ "/" ++ name ++ ".latex"
   in do
+    env <- getApplicationState
+    let target = targetFileFrom env
     debugS "target" target
     liftIO $ do
         result <- runIOorExplode (writeLaTeX def final)
         T.writeFile target result
 
-renderPDF :: FilePath -> String -> Program None ()
-renderPDF tmpdir name =
-  let
-    latex = tmpdir ++ "/" ++ name ++ ".latex"
-    output = tmpdir ++ "/" ++ name ++ ".pdf"
+renderPDF :: Program Env ()
+renderPDF = do
+    env <- getApplicationState
 
-    latexmk = proc "latexmk"
-        [ "-xelatex"
-        , "-output-directory=" ++ tmpdir
-        , "-interaction=nonstopmode"
-        , "-halt-on-error"
-        , "-file-line-error"
-        , latex
-        ]
-    copy = proc "cp"
-        [ output
-        , "."
-        ]
-  in do
+    let latex  = targetFileFrom env
+        output = outputFileFrom env
+        tmpdir = tempDirectoryFrom env
+
+        latexmk = proc "latexmk"
+            [ "-xelatex"
+            , "-output-directory=" ++ tmpdir
+            , "-interaction=nonstopmode"
+            , "-halt-on-error"
+            , "-file-line-error"
+            , latex
+            ]
+        copy = proc "cp"
+            [ output
+            , "."
+            ]
+
     debugS "output" output
     liftIO $ do
         runProcess_ (setStdin closed latexmk)
