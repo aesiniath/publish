@@ -60,10 +60,7 @@ extractBookFile = do
         Just bookfile -> return bookfile
 
 setupTargetFile :: FilePath -> Program Env ()
-setupTargetFile name =
-  let
-    dotfile = ".publish"
-  in do
+setupTargetFile name = do
     tmpdir <- liftIO $ do
         probe1 <- doesFileExist dotfile
         if probe1
@@ -72,14 +69,8 @@ setupTargetFile name =
                 probe2 <- doesDirectoryExist dir
                 if probe2
                     then return dir
-                    else do
-                        dir' <- mkdtemp "/tmp/publish-"
-                        writeFile dotfile dir'
-                        return dir
-            else do
-                dir <- mkdtemp "/tmp/publish-"
-                writeFile dotfile dir
-                return dir
+                    else mkdir
+            else mkdir
 
     debugS "tmpdir" tmpdir
 
@@ -98,7 +89,14 @@ setupTargetFile name =
             }
     setApplicationState env
   where
+    dotfile = ".publish"
+
     base = takeBaseName name -- "/directory/file.ext" -> "file"
+
+    mkdir = do
+        dir <- mkdtemp "/tmp/publish-"
+        writeFile dotfile dir
+        return dir
 
 preamble :: Rope
 preamble = [quote|
