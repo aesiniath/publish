@@ -12,6 +12,8 @@ import Control.Monad (filterM)
 import Core.Program
 import Core.System
 import Core.Text
+import Data.Char (isSpace)
+import Data.List (dropWhileEnd)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -65,7 +67,8 @@ setupTargetFile :: FilePath -> Program Env ()
 setupTargetFile name = do
     tmpdir <- liftIO $ catch
         (do
-            dir <- readFile dotfile
+            dir' <- readFile dotfile
+            let dir = trim dir'
             probe <- doesDirectoryExist dir
             if probe
                 then return dir
@@ -73,10 +76,9 @@ setupTargetFile name = do
         )
         (\(e :: IOError) -> do
             dir <- mkdtemp "/tmp/publish-"
-            writeFile dotfile dir
+            writeFile dotfile (dir ++ "\n")
             return dir
         )
-
 
     debugS "tmpdir" tmpdir
 
@@ -100,6 +102,9 @@ setupTargetFile name = do
     base = takeBaseName name -- "/directory/file.ext" -> "file"
 
     boom = userError "Temp dir no longer present"
+
+    trim :: String -> String
+    trim = dropWhileEnd isSpace
 
 preamble :: Rope
 preamble = [quote|
