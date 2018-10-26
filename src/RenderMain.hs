@@ -5,12 +5,12 @@ module Main where
 
 import Core.Program
 import Core.Text
-import RenderDocument (program)
+import RenderDocument (program, initial)
 
 
 main :: IO ()
 main = do
-    context <- configure None (simple
+    context <- configure initial (simple
         [ Argument "bookfile" [quote|
             The file containing the list of fragments making up this book.
             If the argument is specified as "Hobbit.book" then "Hobbit"

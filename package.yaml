@@ -1,5 +1,5 @@
 name: publish
-version:  0.1.3
+version:  0.1.4
 synopsis: Publishing tools for papers, books, and presentations
 license: BSD3
 license-file: LICENCE
@@ -16,7 +16,9 @@ dependencies:
  - pandoc-types
  - pandoc
  - text
+ - typed-process
  - unbeliever
+ - unix
  - unordered-containers
 
 ghc-options: -threaded -Wall -Wwarn -fwarn-tabs
@@ -27,3 +29,4 @@ executables:
     main: RenderMain.hs
     other-modules:
      - RenderDocument
+     - LatexPreamble
