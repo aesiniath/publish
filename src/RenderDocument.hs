@@ -187,5 +187,7 @@ copyHere = do
             then getModificationTime final
             else getModificationTime "/proc"    -- boot time!
         when (time1 > time2) $ do
-            runProgram (debugS "final" final)
+            runProgram $ do
+                event "Copy resultant PDF here"
+                debugS "final" final
             copyFileWithMetadata result final
