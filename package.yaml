@@ -11,6 +11,7 @@ tested-with: GHC == 8.4
 
 dependencies:
  - base
+ - bytestring
  - directory
  - filepath
  - pandoc-types
@@ -30,3 +31,4 @@ executables:
     other-modules:
      - RenderDocument
      - LatexPreamble
+     - OutputParser
