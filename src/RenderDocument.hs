@@ -18,14 +18,16 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import System.Directory (doesFileExist, doesDirectoryExist
     , getModificationTime, copyFileWithMetadata)
+import System.Exit (ExitCode(..))
 import System.FilePath.Posix (takeBaseName, takeFileName)
 import System.IO (openBinaryFile, IOMode(WriteMode), hClose)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
-import System.Process.Typed (proc, runProcess_, setStdin, closed)
+import System.Process.Typed (proc, readProcess, setStdin, closed)
 import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def)
 
 import LatexPreamble (preamble, ending)
+import OutputParser (parseOutputForError)
 
 data Env = Env
     { targetHandleFrom :: Handle
@@ -172,8 +174,16 @@ renderPDF = do
             ]
 
     debugS "result" result
-    liftIO $ do
-        runProcess_ (setStdin closed latexmk)
+    (exit,out,err) <- liftIO (readProcess (setStdin closed latexmk))
+    debugS "exitcode" exit
+    case exit of
+        ExitFailure _ ->  do
+            event "Render failed"
+            debug "stderr" (intoRope err)
+            debug "stdout" (intoRope out)
+            write (parseOutputForError target out)
+            throw exit
+        ExitSuccess -> return ()
 
 copyHere :: Program Env ()
 copyHere = do
