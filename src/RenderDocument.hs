@@ -20,7 +20,7 @@ import System.Directory (doesFileExist, doesDirectoryExist
     , getModificationTime, copyFileWithMetadata)
 import System.Exit (ExitCode(..))
 import System.FilePath.Posix (takeBaseName, takeFileName)
-import System.IO (openBinaryFile, IOMode(WriteMode), hClose)
+import System.IO (openFile, IOMode(WriteMode), hClose)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
 import System.Process.Typed (proc, readProcess, setStdin, closed)
@@ -89,7 +89,7 @@ setupTargetFile name = do
     let target = tmpdir ++ "/" ++ base ++ ".tex"
         result = tmpdir ++ "/" ++ base ++ ".pdf"
 
-    handle <- liftIO (openBinaryFile target WriteMode)
+    handle <- liftIO (openFile target WriteMode)
     debugS "target" target
 
     liftIO $ hWrite handle preamble
