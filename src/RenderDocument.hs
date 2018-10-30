@@ -24,7 +24,8 @@ import System.IO (openFile, IOMode(WriteMode), hClose)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
 import System.Process.Typed (proc, readProcess, setStdin, closed)
-import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def)
+import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
+    , readerExtensions, pandocExtensions)
 
 import LatexPreamble (preamble, ending)
 import OutputParser (parseOutputForError)
@@ -135,7 +136,7 @@ processFragment file = do
     liftIO $ do
         contents <- T.readFile file
         latex <- runIOorExplode $ do
-            parsed <- readMarkdown def contents
+            parsed <- readMarkdown def { readerExtensions = pandocExtensions } contents
             writeLaTeX def parsed
 
         T.hPutStrLn handle latex
