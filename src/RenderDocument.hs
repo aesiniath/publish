@@ -80,7 +80,7 @@ setupTargetFile name = do
                 then return dir
                 else throw boom
         )
-        (\(e :: IOError) -> do
+        (\(_ :: IOError) -> do
             dir <- mkdtemp "/tmp/publish-"
             writeFile dotfile (dir ++ "\n")
             return dir
@@ -103,7 +103,7 @@ setupTargetFile name = do
             }
     setApplicationState env
   where
-    dotfile = ".publish"
+    dotfile = ".target"
 
     base = takeBaseName name -- "/directory/file.ext" -> "file"
 

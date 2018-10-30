@@ -7,7 +7,6 @@ where
 
 import Core.Text
 import qualified Data.ByteString.Lazy.Char8 as L
-import Data.Char (isSpace)
 
 --
 -- The build command returned a non-zero exit code, so there is a
