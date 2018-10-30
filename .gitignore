@@ -7,4 +7,4 @@
 /render
 
 # runtime debris
-/.publish
+/.target

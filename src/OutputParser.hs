@@ -7,7 +7,6 @@ where
 
 import Core.Text
 import qualified Data.ByteString.Lazy.Char8 as L
-import Data.Char (isSpace)
 
 --
 -- The build command returned a non-zero exit code, so there is a
@@ -24,11 +23,11 @@ parseOutputForError file =
         else stripBeginning bs
 
     dropEnding [] = []
-    dropEnding (b:bs) = if "No pages of output." == b
+    dropEnding (b:bs) = if L.isPrefixOf "Output written on" b || "No pages of output." == b
         then []
         else b : dropEnding bs
   in
-    intoRope . L.unlines . dropEnding . stripBeginning . L.lines
+    intoRope . L.intercalate "\n" . dropEnding . stripBeginning . L.lines
 
 
 -- Error stream from xelatex looks like this:
@@ -37,4 +36,5 @@ parseOutputForError file =
 l.8 \broken
            
 No pages of output.
+Transcript written on /tmp/publish-Km3eN1/Junk.log
 -}

@@ -20,11 +20,12 @@ import System.Directory (doesFileExist, doesDirectoryExist
     , getModificationTime, copyFileWithMetadata)
 import System.Exit (ExitCode(..))
 import System.FilePath.Posix (takeBaseName, takeFileName)
-import System.IO (openBinaryFile, IOMode(WriteMode), hClose)
+import System.IO (openFile, IOMode(WriteMode), hClose)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
 import System.Process.Typed (proc, readProcess, setStdin, closed)
-import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def)
+import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
+    , readerExtensions, pandocExtensions)
 
 import LatexPreamble (preamble, ending)
 import OutputParser (parseOutputForError)
@@ -79,7 +80,7 @@ setupTargetFile name = do
                 then return dir
                 else throw boom
         )
-        (\(e :: IOError) -> do
+        (\(_ :: IOError) -> do
             dir <- mkdtemp "/tmp/publish-"
             writeFile dotfile (dir ++ "\n")
             return dir
@@ -89,7 +90,7 @@ setupTargetFile name = do
     let target = tmpdir ++ "/" ++ base ++ ".tex"
         result = tmpdir ++ "/" ++ base ++ ".pdf"
 
-    handle <- liftIO (openBinaryFile target WriteMode)
+    handle <- liftIO (openFile target WriteMode)
     debugS "target" target
 
     liftIO $ hWrite handle preamble
@@ -102,7 +103,7 @@ setupTargetFile name = do
             }
     setApplicationState env
   where
-    dotfile = ".publish"
+    dotfile = ".target"
 
     base = takeBaseName name -- "/directory/file.ext" -> "file"
 
@@ -135,7 +136,7 @@ processFragment file = do
     liftIO $ do
         contents <- T.readFile file
         latex <- runIOorExplode $ do
-            parsed <- readMarkdown def contents
+            parsed <- readMarkdown def { readerExtensions = pandocExtensions } contents
             writeLaTeX def parsed
 
         T.hPutStrLn handle latex
