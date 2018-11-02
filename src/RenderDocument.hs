@@ -19,7 +19,7 @@ import qualified Data.Text.IO as T
 import System.Directory (doesFileExist, doesDirectoryExist
     , getModificationTime, copyFileWithMetadata)
 import System.Exit (ExitCode(..))
-import System.FilePath.Posix (takeBaseName, takeFileName)
+import System.FilePath.Posix (takeBaseName, takeFileName, takeExtension)
 import System.IO (openFile, IOMode(WriteMode), hClose)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
@@ -133,17 +133,44 @@ processFragment file = do
     let handle = targetHandleFrom env
 
     debugS "fragment" file
+
+--
+-- Default behaviour from the command line is to activate all (?) of
+-- Pandoc's Markdown extensions, but invoking via the `readMarkdown`
+-- function with default ReaderOptions doesn't turn any on. Using
+-- `pandocExtensions` here appears to represent the whole set.
+--
+
+    let options = def { readerExtensions = pandocExtensions }
+
+--
+-- Which kind of file is it? Use the appropriate reader switching on
+-- filename extension. This is where we "call" Pandoc.
+--
+
+        converter t = case takeExtension file of
+            ".markdown" -> runIOorExplode $ do
+                parsed <- readMarkdown options t
+                writeLaTeX def parsed
+            ".latex"    -> return t
+            _           -> error "Unknown file extension"
+
+--
+-- Read the fragment, process it if Markdown then run it out to LaTeX.
+--
+
     liftIO $ do
         contents <- T.readFile file
-        latex <- runIOorExplode $ do
-            parsed <- readMarkdown def { readerExtensions = pandocExtensions } contents
-            writeLaTeX def parsed
+        latex <- converter contents
 
+
+        T.hPutStrLn handle (T.append "% -- " (T.pack file))
         T.hPutStrLn handle latex
 
-        -- for some reason, the Markdown -> LaTeX pair strips trailing
-        -- whitespace from the block, resulting in a no paragraph boundary
-        -- between files. So gratuitously add a break
+-- for some reason, the Markdown -> LaTeX pair strips trailing whitespace
+-- from the block, resulting in a no paragraph boundary between files. So
+-- gratuitously add a break
+
         T.hPutStr handle "\n"
 
 -- finish file
