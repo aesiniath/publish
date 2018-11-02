@@ -93,7 +93,11 @@ setupTargetFile name = do
     handle <- liftIO (openFile target WriteMode)
     debugS "target" target
 
-    liftIO $ hWrite handle preamble
+    params <- getCommandLine
+    case lookupOptionFlag "default-preamble" params of
+        Just True   -> liftIO $ do
+            hWrite handle preamble
+        _           -> return ()
 
     let env = Env
             { targetHandleFrom = handle
@@ -178,9 +182,14 @@ produceResult :: Program Env ()
 produceResult = do
     env <- getApplicationState
     let handle = targetHandleFrom env
-    liftIO $ do
-        hWrite handle ending
-        hClose handle
+
+    params <- getCommandLine
+    case lookupOptionFlag "default-preamble" params of
+        Just True   -> liftIO $ do
+            hWrite handle ending
+            hClose handle
+        _           -> liftIO $ do
+            hClose handle
 
 
 renderPDF :: Program Env ()
