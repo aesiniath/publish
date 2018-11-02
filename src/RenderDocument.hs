@@ -163,6 +163,8 @@ processFragment file = do
         contents <- T.readFile file
         latex <- converter contents
 
+
+        T.hPutStrLn handle (T.append "% -- " (T.pack file))
         T.hPutStrLn handle latex
 
 -- for some reason, the Markdown -> LaTeX pair strips trailing whitespace
