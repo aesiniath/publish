@@ -25,7 +25,8 @@ import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
 import System.Process.Typed (proc, readProcess, setStdin, closed)
 import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
-    , readerExtensions, pandocExtensions)
+    , readerExtensions, pandocExtensions, writerTopLevelDivision
+    , TopLevelDivision(TopLevelChapter))
 
 import LatexPreamble (preamble, ending)
 import OutputParser (parseOutputForError)
@@ -145,7 +146,16 @@ processFragment file = do
 -- `pandocExtensions` here appears to represent the whole set.
 --
 
-    let options = def { readerExtensions = pandocExtensions }
+    let readingOptions = def { readerExtensions = pandocExtensions }
+
+--
+-- When output format is LaTeX, the command-line _pandoc_ tool does some
+-- somewhat convoluted heuristics to decide whether top-level headings
+-- (ie <H1>, ====, #) are to be considered \part, \chapter, or \section.
+-- The fact that is not deterministic is annoying. Force the issue.
+--
+
+    let writingOptions = def { writerTopLevelDivision = TopLevelChapter }
 
 --
 -- Which kind of file is it? Use the appropriate reader switching on
@@ -154,8 +164,8 @@ processFragment file = do
 
         converter t = case takeExtension file of
             ".markdown" -> runIOorExplode $ do
-                parsed <- readMarkdown options t
-                writeLaTeX def parsed
+                parsed <- readMarkdown readingOptions t
+                writeLaTeX writingOptions parsed
             ".latex"    -> return t
             _           -> error "Unknown file extension"
 
