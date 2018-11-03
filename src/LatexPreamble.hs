@@ -60,6 +60,18 @@ preamble = [quote|
 
 \usepackage[hidelinks]{hyperref}
 
+%
+% Get rid of default headers and put page number in footer.
+%
+
+\makeoddfoot{plain}{}{}{\tiny\textsf{\thepage/\thelastpage}}
+\makeevenfoot{plain}{\tiny\textsf{\thepage/\thelastpage}}{}{}
+
+\makeoddhead{plain}{}{}{}
+\makeevenhead{plain}{}{}{}
+
+\pagestyle{plain}
+
 \SingleSpacing
 \traditionalparskip
 \setlength{\parindent}{0em}
