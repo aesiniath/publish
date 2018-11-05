@@ -200,20 +200,29 @@ passthroughLaTeX file = do
         contents <- T.readFile file
         T.hPutStrLn handle contents
 
+{-|
+Images in SVG format need to be converted to PDF to be able to be
+included in the output as LaTeX doesn't understand SVG natively, which
+is slightly shocking.
+-}
+-- FIXME bug: images need to be sorted into a directory hierarchy.
 generateImage :: FilePath -> Program Env ()
-generateImage file =
-  let
-    output = takeBaseName file ++ ".pdf"
-    rsvgConvert = proc "rsvg-convert"
-        [ "--format=pdf"
-        , "--output=" ++ output
-        , file
-        ]
-  in do
+generateImage file = do
+    env <- getApplicationState
+
+    let tmpdir = tempDirectoryFrom env
+        output = tmpdir ++ "/" ++ takeBaseName file ++ ".pdf"
+
+        rsvgConvert = proc
+            "rsvg-convert"
+            [ "--format=pdf"
+            , "--output=" ++ output
+            , file
+            ]
+
     debugS "image" file
     debugS "output" output
     (exit,out,err) <- liftIO (readProcess (setStdin closed rsvgConvert))
-    debugS "exitcode" exit
     case exit of
         ExitFailure _ ->  do
             event "Image processing failed"
@@ -249,7 +258,6 @@ renderPDF = do
         tmpdir = tempDirectoryFrom env
 
         latexmk = proc "latexmk"
-
             [ "-xelatex"
             , "-output-directory=" ++ tmpdir
             , "-interaction=nonstopmode"
@@ -260,7 +268,6 @@ renderPDF = do
 
     debugS "result" result
     (exit,out,err) <- liftIO (readProcess (setStdin closed latexmk))
-    debugS "exitcode" exit
     case exit of
         ExitFailure _ ->  do
             event "Render failed"
