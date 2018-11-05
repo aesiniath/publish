@@ -51,7 +51,7 @@ program = do
     event "Setup temporary directory"
     setupTargetFile bookfile
 
-    event "Convert Markdown pieces to LaTeX"
+    event "Convert document fragments to LaTeX"
     mapM_ processFragment files
 
     event "Write intermediate LaTeX file"
@@ -138,62 +138,89 @@ filename extension.
 -}
 processFragment :: FilePath -> Program Env ()
 processFragment file = do
-    env <- getApplicationState
-    let handle = targetHandleFrom env
-
     debugS "fragment" file
 
     -- Read the fragment, process it if Markdown then run it out to LaTeX.
-    liftIO $ case takeExtension file of
-        ".markdown" -> convertMarkdown handle file
-        ".latex"    -> passthroughLaTeX handle file
+    case takeExtension file of
+        ".markdown" -> convertMarkdown file
+        ".latex"    -> passthroughLaTeX file
         ".svg"      -> generateImage file
         _           -> error "Unknown file extension"
 
 {-|
 Convert Markdown to LaTeX. This is where we "call" Pandoc.
--}
-convertMarkdown :: Handle -> FilePath -> IO ()
-convertMarkdown handle file =
-  let
 
-    -- Default behaviour from the command line is to activate all (?) of
-    -- Pandoc's Markdown extensions, but invoking via the `readMarkdown`
-    -- function with default ReaderOptions doesn't turn any on. Using
-    -- `pandocExtensions` here appears to represent the whole set.
+Default behaviour from the command line is to activate all (?) of Pandoc's
+Markdown extensions, but invoking via the `readMarkdown` function with
+default ReaderOptions doesn't turn any on. Using `pandocExtensions` here
+appears to represent the whole set.
+
+When output format is LaTeX, the command-line _pandoc_ tool does some
+somewhat convoluted heuristics to decide whether top-level headings (ie
+<H1>, ====, #) are to be considered \part, \chapter, or \section.  The fact
+that is not deterministic is annoying. Force the issue.
+
+Finally, for some reason, the Markdown -> LaTeX pair strips trailing
+whitespace from the block, resulting in a no paragraph boundary between
+files. So gratuitously add a break.
+-}
+convertMarkdown :: FilePath -> Program Env ()
+convertMarkdown file =
+  let
     readingOptions = def { readerExtensions = pandocExtensions }
 
-    -- When output format is LaTeX, the command-line _pandoc_ tool does
-    -- some somewhat convoluted heuristics to decide whether top-level
-    -- headings (ie <H1>, ====, #) are to be considered \part, \chapter, or
-    -- \section.  The fact that is not deterministic is annoying. Force the
-    -- issue.
     writingOptions = def { writerTopLevelDivision = TopLevelChapter }
 
   in do
-    contents <- T.readFile file
-    latex <- runIOorExplode $ do
-        parsed <- readMarkdown readingOptions contents
-        writeLaTeX writingOptions parsed
-    T.hPutStrLn handle latex
+    env <- getApplicationState
+    let handle = targetHandleFrom env
 
-    -- for some reason, the Markdown -> LaTeX pair strips trailing
-    -- whitespace from the block, resulting in a no paragraph boundary
-    -- between files. So gratuitously add a break
-    T.hPutStr handle "\n"
+    liftIO $ do
+        contents <- T.readFile file
+
+        latex <- runIOorExplode $ do
+            parsed <- readMarkdown readingOptions contents
+            writeLaTeX writingOptions parsed
+
+        T.hPutStrLn handle latex
+
+        T.hPutStr handle "\n"
 
 
 {-|
-If a source fragment is already LaTeX, simply copy it through to 
+If a source fragment is already LaTeX, simply copy it through to
 the target file.
 -}
-passthroughLaTeX :: Handle -> FilePath -> IO ()
-passthroughLaTeX handle file = do
-    contents <- T.readFile file
-    T.hPutStrLn handle contents
+passthroughLaTeX :: FilePath -> Program Env ()
+passthroughLaTeX file = do
+    env <- getApplicationState
+    let handle = targetHandleFrom env
 
-generateImage :: FilePath -> IO ()
-generateImage file = undefined
+    liftIO $ do
+        contents <- T.readFile file
+        T.hPutStrLn handle contents
+
+generateImage :: FilePath -> Program Env ()
+generateImage file =
+  let
+    output = takeBaseName file ++ ".pdf"
+    rsvgConvert = proc "rsvg-convert"
+        [ "--format=pdf"
+        , "--output=" ++ output
+        , file
+        ]
+  in do
+    debugS "image" file
+    debugS "output" output
+    (exit,out,err) <- liftIO (readProcess (setStdin closed rsvgConvert))
+    debugS "exitcode" exit
+    case exit of
+        ExitFailure _ ->  do
+            event "Image processing failed"
+            debug "stderr" (intoRope err)
+            debug "stdout" (intoRope out)
+            throw exit
+        ExitSuccess -> return ()
 
 
 {-|
