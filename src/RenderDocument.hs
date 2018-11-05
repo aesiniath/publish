@@ -7,7 +7,7 @@ module RenderDocument
     )
 where
 
-import Control.Monad (filterM, when)
+import Control.Monad (filterM, when, forM_)
 import Core.Program
 import Core.System
 import Core.Text
@@ -21,7 +21,7 @@ import System.Directory (doesFileExist, doesDirectoryExist
 import System.Exit (ExitCode(..))
 import System.FilePath.Posix (takeBaseName, takeFileName, takeExtension
     , replaceExtension, takeDirectory)
-import System.IO (openFile, withFile, IOMode(WriteMode), hClose)
+import System.IO (openFile, withFile, IOMode(WriteMode), hClose, hPutStrLn)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
 import System.Process.Typed (proc, readProcess, setStdin, closed)
@@ -134,7 +134,7 @@ processBookFile file = do
     possibilities = map T.unpack . filter (not . T.null)
         . filter (not . T.isPrefixOf "#") . T.lines
 
-{-|
+{-
 Which kind of file is it? Dispatch to the appropriate reader switching on
 filename extension.
 -}
@@ -149,7 +149,7 @@ processFragment file = do
         ".svg"      -> generateImage file
         _           -> error "Unknown file extension"
 
-{-|
+{-
 Some source files live in subdirectories. Replicate that directory
 structure in the temporary build space
 -}
@@ -161,7 +161,7 @@ ensureDirectory target = do
         createDirectory subdir
 
 
-{-|
+{-
 Convert Markdown to LaTeX. This is where we "call" Pandoc.
 
 Default behaviour from the command line is to activate all (?) of Pandoc's
@@ -206,7 +206,7 @@ convertMarkdown file =
     let env' = env { intermediateFilenamesFrom = target:files }
     setApplicationState env'
 
-{-|
+{-
 If a source fragment is already LaTeX, simply copy it through to
 the target file.
 -}
@@ -224,12 +224,11 @@ passthroughLaTeX file = do
     let env' = env { intermediateFilenamesFrom = target:files }
     setApplicationState env'
 
-{-|
+{-
 Images in SVG format need to be converted to PDF to be able to be
 included in the output as LaTeX doesn't understand SVG natively, which
 is slightly shocking.
 -}
--- FIXME bug: images need to be sorted into a directory hierarchy.
 generateImage :: FilePath -> Program Env ()
 generateImage file = do
     env <- getApplicationState
@@ -257,13 +256,14 @@ generateImage file = do
         ExitSuccess -> return ()
 
 
-{-|
-Finish the intermediate target file.
+{-
+Finish up by writing the intermediate "master" file.
 -}
 produceResult :: Program Env ()
 produceResult = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
+        master = masterFilenameFrom env
         files = intermediateFilenamesFrom env
 
     params <- getCommandLine
@@ -276,8 +276,10 @@ produceResult = do
             return (target:files)
         Just _      -> invalid
 
-    -- TODO
-    writeS (reverse files')
+    debugS "master" master
+    liftIO $ withFile master WriteMode $ \handle -> do
+        forM_ (reverse files') $ \file -> do
+            hPutStrLn handle ("\\input{" ++ file ++ "}")
 
 
 renderPDF :: Program Env ()
