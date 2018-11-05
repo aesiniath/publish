@@ -17,10 +17,11 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import System.Directory (doesFileExist, doesDirectoryExist
-    , getModificationTime, copyFileWithMetadata)
+    , getModificationTime, copyFileWithMetadata, createDirectory)
 import System.Exit (ExitCode(..))
-import System.FilePath.Posix (takeBaseName, takeFileName, takeExtension)
-import System.IO (openFile, IOMode(WriteMode), hClose)
+import System.FilePath.Posix (takeBaseName, takeFileName, takeExtension
+    , replaceExtension, takeDirectory)
+import System.IO (openFile, withFile, IOMode(WriteMode), hClose)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
 import System.Process.Typed (proc, readProcess, setStdin, closed)
@@ -32,14 +33,14 @@ import LatexPreamble (preamble, ending)
 import OutputParser (parseOutputForError)
 
 data Env = Env
-    { targetHandleFrom :: Handle
-    , targetFilenameFrom :: FilePath
+    { intermediateFilenamesFrom :: [FilePath]
+    , masterFilenameFrom :: FilePath
     , resultFilenameFrom :: FilePath
     , tempDirectoryFrom :: FilePath
     }
 
 initial :: Env
-initial = Env undefined "" "" ""
+initial = Env [] "" "" ""
 
 program :: Program Env ()
 program = do
@@ -88,21 +89,22 @@ setupTargetFile name = do
         )
     debugS "tmpdir" tmpdir
 
-    let target = tmpdir ++ "/" ++ base ++ ".tex"
+    let master = tmpdir ++ "/" ++ base ++ ".tex"
         result = tmpdir ++ "/" ++ base ++ ".pdf"
 
-    handle <- liftIO (openFile target WriteMode)
-    debugS "target" target
-
     params <- getCommandLine
-    case lookupOptionFlag "default-preamble" params of
-        Just True   -> liftIO $ do
-            hWrite handle preamble
-        _           -> return ()
+    first <- case lookupOptionFlag "default-preamble" params of
+        Nothing     -> return []
+        Just True   -> do
+            let target = tmpdir ++ "/00_Beginning.tex"
+            liftIO $ withFile target WriteMode $ \handle -> do
+                hWrite handle preamble
+            return [target]
+        Just _      -> invalid
 
     let env = Env
-            { targetHandleFrom = handle
-            , targetFilenameFrom = target
+            { intermediateFilenamesFrom = first
+            , masterFilenameFrom = master
             , resultFilenameFrom = result
             , tempDirectoryFrom = tmpdir
             }
@@ -148,6 +150,18 @@ processFragment file = do
         _           -> error "Unknown file extension"
 
 {-|
+Some source files live in subdirectories. Replicate that directory
+structure in the temporary build space
+-}
+ensureDirectory :: FilePath -> IO ()
+ensureDirectory target = do
+    let subdir = takeDirectory target
+    probe <- doesDirectoryExist subdir
+    when (not probe) $ do
+        createDirectory subdir
+
+
+{-|
 Convert Markdown to LaTeX. This is where we "call" Pandoc.
 
 Default behaviour from the command line is to activate all (?) of Pandoc's
@@ -173,7 +187,9 @@ convertMarkdown file =
 
   in do
     env <- getApplicationState
-    let handle = targetHandleFrom env
+    let tmpdir = tempDirectoryFrom env
+        target = tmpdir ++ "/" ++ replaceExtension file ".tex"
+        files = intermediateFilenamesFrom env
 
     liftIO $ do
         contents <- T.readFile file
@@ -182,10 +198,13 @@ convertMarkdown file =
             parsed <- readMarkdown readingOptions contents
             writeLaTeX writingOptions parsed
 
-        T.hPutStrLn handle latex
+        ensureDirectory target
+        withFile target WriteMode $ \handle -> do
+            T.hPutStrLn handle latex
+            T.hPutStr handle "\n"
 
-        T.hPutStr handle "\n"
-
+    let env' = env { intermediateFilenamesFrom = target:files }
+    setApplicationState env'
 
 {-|
 If a source fragment is already LaTeX, simply copy it through to
@@ -194,11 +213,16 @@ the target file.
 passthroughLaTeX :: FilePath -> Program Env ()
 passthroughLaTeX file = do
     env <- getApplicationState
-    let handle = targetHandleFrom env
+    let tmpdir = tempDirectoryFrom env
+        target = tmpdir ++ "/" ++ takeBaseName file ++ ".tex"
+        files = intermediateFilenamesFrom env
 
     liftIO $ do
-        contents <- T.readFile file
-        T.hPutStrLn handle contents
+        ensureDirectory target
+        copyFileWithMetadata file target
+
+    let env' = env { intermediateFilenamesFrom = target:files }
+    setApplicationState env'
 
 {-|
 Images in SVG format need to be converted to PDF to be able to be
@@ -209,20 +233,21 @@ is slightly shocking.
 generateImage :: FilePath -> Program Env ()
 generateImage file = do
     env <- getApplicationState
-
     let tmpdir = tempDirectoryFrom env
-        output = tmpdir ++ "/" ++ takeBaseName file ++ ".pdf"
+        target = tmpdir ++ "/" ++ replaceExtension file ".pdf"
 
         rsvgConvert = proc
             "rsvg-convert"
             [ "--format=pdf"
-            , "--output=" ++ output
+            , "--output=" ++ target
             , file
             ]
 
     debugS "image" file
-    debugS "output" output
-    (exit,out,err) <- liftIO (readProcess (setStdin closed rsvgConvert))
+    debugS "target" target
+    (exit,out,err) <- liftIO $ do
+        ensureDirectory target
+        readProcess (setStdin closed rsvgConvert)
     case exit of
         ExitFailure _ ->  do
             event "Image processing failed"
@@ -238,22 +263,28 @@ Finish the intermediate target file.
 produceResult :: Program Env ()
 produceResult = do
     env <- getApplicationState
-    let handle = targetHandleFrom env
+    let tmpdir = tempDirectoryFrom env
+        files = intermediateFilenamesFrom env
 
     params <- getCommandLine
-    case lookupOptionFlag "default-preamble" params of
-        Just True   -> liftIO $ do
-            hWrite handle ending
-            hClose handle
-        _           -> liftIO $ do
-            hClose handle
+    files' <- case lookupOptionFlag "default-preamble" params of
+        Nothing     -> return files
+        Just True   -> do
+            let target = tmpdir ++ "/ZZ_Ending.tex"
+            liftIO $ withFile target WriteMode $ \handle -> do
+                hWrite handle ending
+            return (target:files)
+        Just _      -> invalid
+
+    -- TODO
+    writeS (reverse files')
 
 
 renderPDF :: Program Env ()
 renderPDF = do
     env <- getApplicationState
 
-    let target = targetFilenameFrom env
+    let master = masterFilenameFrom env
         result = resultFilenameFrom env
         tmpdir = tempDirectoryFrom env
 
@@ -263,7 +294,7 @@ renderPDF = do
             , "-interaction=nonstopmode"
             , "-halt-on-error"
             , "-file-line-error"
-            , target
+            , master
             ]
 
     debugS "result" result
@@ -273,7 +304,7 @@ renderPDF = do
             event "Render failed"
             debug "stderr" (intoRope err)
             debug "stdout" (intoRope out)
-            write (parseOutputForError target out)
+            write (parseOutputForError master out)
             throw exit
         ExitSuccess -> return ()
 
