@@ -132,6 +132,10 @@ processBookFile file = do
     possibilities = map T.unpack . filter (not . T.null)
         . filter (not . T.isPrefixOf "#") . T.lines
 
+{-|
+Which kind of file is it? Dispatch to the appropriate reader switching on
+filename extension.
+-}
 processFragment :: FilePath -> Program Env ()
 processFragment file = do
     env <- getApplicationState
@@ -139,55 +143,62 @@ processFragment file = do
 
     debugS "fragment" file
 
---
--- Default behaviour from the command line is to activate all (?) of
--- Pandoc's Markdown extensions, but invoking via the `readMarkdown`
--- function with default ReaderOptions doesn't turn any on. Using
--- `pandocExtensions` here appears to represent the whole set.
---
+    -- Read the fragment, process it if Markdown then run it out to LaTeX.
+    liftIO $ case takeExtension file of
+        ".markdown" -> convertMarkdown handle file
+        ".latex"    -> passthroughLaTeX handle file
+        ".svg"      -> generateImage file
+        _           -> error "Unknown file extension"
 
-    let readingOptions = def { readerExtensions = pandocExtensions }
+{-|
+Convert Markdown to LaTeX. This is where we "call" Pandoc.
+-}
+convertMarkdown :: Handle -> FilePath -> IO ()
+convertMarkdown handle file =
+  let
 
---
--- When output format is LaTeX, the command-line _pandoc_ tool does some
--- somewhat convoluted heuristics to decide whether top-level headings
--- (ie <H1>, ====, #) are to be considered \part, \chapter, or \section.
--- The fact that is not deterministic is annoying. Force the issue.
---
+    -- Default behaviour from the command line is to activate all (?) of
+    -- Pandoc's Markdown extensions, but invoking via the `readMarkdown`
+    -- function with default ReaderOptions doesn't turn any on. Using
+    -- `pandocExtensions` here appears to represent the whole set.
+    readingOptions = def { readerExtensions = pandocExtensions }
 
-    let writingOptions = def { writerTopLevelDivision = TopLevelChapter }
+    -- When output format is LaTeX, the command-line _pandoc_ tool does
+    -- some somewhat convoluted heuristics to decide whether top-level
+    -- headings (ie <H1>, ====, #) are to be considered \part, \chapter, or
+    -- \section.  The fact that is not deterministic is annoying. Force the
+    -- issue.
+    writingOptions = def { writerTopLevelDivision = TopLevelChapter }
 
---
--- Which kind of file is it? Use the appropriate reader switching on
--- filename extension. This is where we "call" Pandoc.
---
+  in do
+    contents <- T.readFile file
+    latex <- runIOorExplode $ do
+        parsed <- readMarkdown readingOptions contents
+        writeLaTeX writingOptions parsed
+    T.hPutStrLn handle latex
 
-        converter t = case takeExtension file of
-            ".markdown" -> runIOorExplode $ do
-                parsed <- readMarkdown readingOptions t
-                writeLaTeX writingOptions parsed
-            ".latex"    -> return t
-            _           -> error "Unknown file extension"
-
---
--- Read the fragment, process it if Markdown then run it out to LaTeX.
---
-
-    liftIO $ do
-        contents <- T.readFile file
-        latex <- converter contents
+    -- for some reason, the Markdown -> LaTeX pair strips trailing
+    -- whitespace from the block, resulting in a no paragraph boundary
+    -- between files. So gratuitously add a break
+    T.hPutStr handle "\n"
 
 
-        T.hPutStrLn handle (T.append "% -- " (T.pack file))
-        T.hPutStrLn handle latex
+{-|
+If a source fragment is already LaTeX, simply copy it through to 
+the target file.
+-}
+passthroughLaTeX :: Handle -> FilePath -> IO ()
+passthroughLaTeX handle file = do
+    contents <- T.readFile file
+    T.hPutStrLn handle contents
 
--- for some reason, the Markdown -> LaTeX pair strips trailing whitespace
--- from the block, resulting in a no paragraph boundary between files. So
--- gratuitously add a break
+generateImage :: FilePath -> IO ()
+generateImage file = undefined
 
-        T.hPutStr handle "\n"
 
--- finish file
+{-|
+Finish the intermediate target file.
+-}
 produceResult :: Program Env ()
 produceResult = do
     env <- getApplicationState
