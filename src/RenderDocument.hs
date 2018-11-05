@@ -51,7 +51,7 @@ program = do
     event "Setup temporary directory"
     setupTargetFile bookfile
 
-    event "Convert Markdown pieces to LaTeX"
+    event "Convert document fragments to LaTeX"
     mapM_ processFragment files
 
     event "Write intermediate LaTeX file"
@@ -132,62 +132,109 @@ processBookFile file = do
     possibilities = map T.unpack . filter (not . T.null)
         . filter (not . T.isPrefixOf "#") . T.lines
 
+{-|
+Which kind of file is it? Dispatch to the appropriate reader switching on
+filename extension.
+-}
 processFragment :: FilePath -> Program Env ()
 processFragment file = do
+    debugS "fragment" file
+
+    -- Read the fragment, process it if Markdown then run it out to LaTeX.
+    case takeExtension file of
+        ".markdown" -> convertMarkdown file
+        ".latex"    -> passthroughLaTeX file
+        ".svg"      -> generateImage file
+        _           -> error "Unknown file extension"
+
+{-|
+Convert Markdown to LaTeX. This is where we "call" Pandoc.
+
+Default behaviour from the command line is to activate all (?) of Pandoc's
+Markdown extensions, but invoking via the `readMarkdown` function with
+default ReaderOptions doesn't turn any on. Using `pandocExtensions` here
+appears to represent the whole set.
+
+When output format is LaTeX, the command-line _pandoc_ tool does some
+somewhat convoluted heuristics to decide whether top-level headings (ie
+<H1>, ====, #) are to be considered \part, \chapter, or \section.  The fact
+that is not deterministic is annoying. Force the issue.
+
+Finally, for some reason, the Markdown -> LaTeX pair strips trailing
+whitespace from the block, resulting in a no paragraph boundary between
+files. So gratuitously add a break.
+-}
+convertMarkdown :: FilePath -> Program Env ()
+convertMarkdown file =
+  let
+    readingOptions = def { readerExtensions = pandocExtensions }
+
+    writingOptions = def { writerTopLevelDivision = TopLevelChapter }
+
+  in do
     env <- getApplicationState
     let handle = targetHandleFrom env
 
-    debugS "fragment" file
-
---
--- Default behaviour from the command line is to activate all (?) of
--- Pandoc's Markdown extensions, but invoking via the `readMarkdown`
--- function with default ReaderOptions doesn't turn any on. Using
--- `pandocExtensions` here appears to represent the whole set.
---
-
-    let readingOptions = def { readerExtensions = pandocExtensions }
-
---
--- When output format is LaTeX, the command-line _pandoc_ tool does some
--- somewhat convoluted heuristics to decide whether top-level headings
--- (ie <H1>, ====, #) are to be considered \part, \chapter, or \section.
--- The fact that is not deterministic is annoying. Force the issue.
---
-
-    let writingOptions = def { writerTopLevelDivision = TopLevelChapter }
-
---
--- Which kind of file is it? Use the appropriate reader switching on
--- filename extension. This is where we "call" Pandoc.
---
-
-        converter t = case takeExtension file of
-            ".markdown" -> runIOorExplode $ do
-                parsed <- readMarkdown readingOptions t
-                writeLaTeX writingOptions parsed
-            ".latex"    -> return t
-            _           -> error "Unknown file extension"
-
---
--- Read the fragment, process it if Markdown then run it out to LaTeX.
---
-
     liftIO $ do
         contents <- T.readFile file
-        latex <- converter contents
 
+        latex <- runIOorExplode $ do
+            parsed <- readMarkdown readingOptions contents
+            writeLaTeX writingOptions parsed
 
-        T.hPutStrLn handle (T.append "% -- " (T.pack file))
         T.hPutStrLn handle latex
-
--- for some reason, the Markdown -> LaTeX pair strips trailing whitespace
--- from the block, resulting in a no paragraph boundary between files. So
--- gratuitously add a break
 
         T.hPutStr handle "\n"
 
--- finish file
+
+{-|
+If a source fragment is already LaTeX, simply copy it through to
+the target file.
+-}
+passthroughLaTeX :: FilePath -> Program Env ()
+passthroughLaTeX file = do
+    env <- getApplicationState
+    let handle = targetHandleFrom env
+
+    liftIO $ do
+        contents <- T.readFile file
+        T.hPutStrLn handle contents
+
+{-|
+Images in SVG format need to be converted to PDF to be able to be
+included in the output as LaTeX doesn't understand SVG natively, which
+is slightly shocking.
+-}
+-- FIXME bug: images need to be sorted into a directory hierarchy.
+generateImage :: FilePath -> Program Env ()
+generateImage file = do
+    env <- getApplicationState
+
+    let tmpdir = tempDirectoryFrom env
+        output = tmpdir ++ "/" ++ takeBaseName file ++ ".pdf"
+
+        rsvgConvert = proc
+            "rsvg-convert"
+            [ "--format=pdf"
+            , "--output=" ++ output
+            , file
+            ]
+
+    debugS "image" file
+    debugS "output" output
+    (exit,out,err) <- liftIO (readProcess (setStdin closed rsvgConvert))
+    case exit of
+        ExitFailure _ ->  do
+            event "Image processing failed"
+            debug "stderr" (intoRope err)
+            debug "stdout" (intoRope out)
+            throw exit
+        ExitSuccess -> return ()
+
+
+{-|
+Finish the intermediate target file.
+-}
 produceResult :: Program Env ()
 produceResult = do
     env <- getApplicationState
@@ -211,7 +258,6 @@ renderPDF = do
         tmpdir = tempDirectoryFrom env
 
         latexmk = proc "latexmk"
-
             [ "-xelatex"
             , "-output-directory=" ++ tmpdir
             , "-interaction=nonstopmode"
@@ -222,7 +268,6 @@ renderPDF = do
 
     debugS "result" result
     (exit,out,err) <- liftIO (readProcess (setStdin closed latexmk))
-    debugS "exitcode" exit
     case exit of
         ExitFailure _ ->  do
             event "Render failed"
