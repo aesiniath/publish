@@ -32,3 +32,4 @@ executables:
      - RenderDocument
      - LatexPreamble
      - OutputParser
+     - Utilities

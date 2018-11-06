@@ -12,25 +12,25 @@ import Core.Program
 import Core.System
 import Core.Text
 import Data.Char (isSpace)
-import Data.List (dropWhileEnd)
+import qualified Data.List as List (dropWhileEnd)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import System.Directory (doesFileExist, doesDirectoryExist
-    , getModificationTime, copyFileWithMetadata, createDirectory)
+    , getModificationTime, copyFileWithMetadata)
 import System.Exit (ExitCode(..))
 import System.FilePath.Posix (takeBaseName, takeFileName, takeExtension
-    , replaceExtension, takeDirectory)
-import System.IO (openFile, withFile, IOMode(WriteMode), hClose, hPutStrLn)
+    , replaceExtension)
+import System.IO (withFile, IOMode(WriteMode), hPutStrLn)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
-import System.Process.Typed (proc, readProcess, setStdin, closed)
 import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
     , readerExtensions, pandocExtensions, writerTopLevelDivision
     , TopLevelDivision(TopLevelChapter))
 
 import LatexPreamble (preamble, ending)
 import OutputParser (parseOutputForError)
+import Utilities (ensureDirectory, execProcess)
 
 data Env = Env
     { intermediateFilenamesFrom :: [FilePath]
@@ -117,7 +117,7 @@ setupTargetFile name = do
     boom = userError "Temp dir no longer present"
 
     trim :: String -> String
-    trim = dropWhileEnd isSpace
+    trim = List.dropWhileEnd isSpace
 
 
 processBookFile :: FilePath -> Program Env [FilePath]
@@ -150,18 +150,6 @@ processFragment file = do
         _           -> error "Unknown file extension"
 
 {-
-Some source files live in subdirectories. Replicate that directory
-structure in the temporary build space
--}
-ensureDirectory :: FilePath -> IO ()
-ensureDirectory target = do
-    let subdir = takeDirectory target
-    probe <- doesDirectoryExist subdir
-    when (not probe) $ do
-        createDirectory subdir
-
-
-{-
 Convert Markdown to LaTeX. This is where we "call" Pandoc.
 
 Default behaviour from the command line is to activate all (?) of Pandoc's
@@ -191,6 +179,7 @@ convertMarkdown file =
         target = tmpdir ++ "/" ++ replaceExtension file ".tex"
         files = intermediateFilenamesFrom env
 
+    ensureDirectory target
     liftIO $ do
         contents <- T.readFile file
 
@@ -198,7 +187,6 @@ convertMarkdown file =
             parsed <- readMarkdown readingOptions contents
             writeLaTeX writingOptions parsed
 
-        ensureDirectory target
         withFile target WriteMode $ \handle -> do
             T.hPutStrLn handle latex
             T.hPutStr handle "\n"
@@ -217,8 +205,8 @@ passthroughLaTeX file = do
         target = tmpdir ++ "/" ++ takeBaseName file ++ ".tex"
         files = intermediateFilenamesFrom env
 
+    ensureDirectory target
     liftIO $ do
-        ensureDirectory target
         copyFileWithMetadata file target
 
     let env' = env { intermediateFilenamesFrom = target:files }
@@ -235,18 +223,16 @@ generateImage file = do
     let tmpdir = tempDirectoryFrom env
         target = tmpdir ++ "/" ++ replaceExtension file ".pdf"
 
-        rsvgConvert = proc
-            "rsvg-convert"
-            [ "--format=pdf"
+        rsvgConvert =
+            [ "rsvg-convert"
+            , "--format=pdf"
             , "--output=" ++ target
             , file
             ]
 
-    debugS "image" file
-    debugS "target" target
-    (exit,out,err) <- liftIO $ do
+    (exit,out,err) <- do
         ensureDirectory target
-        readProcess (setStdin closed rsvgConvert)
+        execProcess rsvgConvert
     case exit of
         ExitFailure _ ->  do
             event "Image processing failed"
@@ -290,8 +276,9 @@ renderPDF = do
         result = resultFilenameFrom env
         tmpdir = tempDirectoryFrom env
 
-        latexmk = proc "latexmk"
-            [ "-xelatex"
+        latexmk =
+            [ "latexmk"
+            , "-xelatex"
             , "-output-directory=" ++ tmpdir
             , "-interaction=nonstopmode"
             , "-halt-on-error"
@@ -300,7 +287,7 @@ renderPDF = do
             ]
 
     debugS "result" result
-    (exit,out,err) <- liftIO (readProcess (setStdin closed latexmk))
+    (exit,out,err) <- execProcess latexmk
     case exit of
         ExitFailure _ ->  do
             event "Render failed"
@@ -323,6 +310,6 @@ copyHere = do
             else getModificationTime "/proc"    -- boot time!
         when (time1 > time2) $ do
             runProgram $ do
-                event "Copy resultant PDF here"
+                event "Copy resultant document here"
                 debugS "final" final
             copyFileWithMetadata result final
