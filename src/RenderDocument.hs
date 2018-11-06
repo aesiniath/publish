@@ -306,7 +306,7 @@ renderPDF = do
             event "Render failed"
             debug "stderr" (intoRope err)
             debug "stdout" (intoRope out)
-            write (parseOutputForError master out)
+            write (parseOutputForError tmpdir out)
             throw exit
         ExitSuccess -> return ()
 

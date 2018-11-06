@@ -13,9 +13,9 @@ import qualified Data.ByteString.Lazy.Char8 as L
 -- reasonable assumption that there is indeed an error to be extracted.
 --
 parseOutputForError :: FilePath -> L.ByteString -> Rope
-parseOutputForError file =
+parseOutputForError tmpdir =
   let
-    needle = L.snoc (L.pack file)  ':'
+    needle = L.pack tmpdir
 
     stripBeginning [] = []
     stripBeginning (b:bs) = if L.isPrefixOf needle b
