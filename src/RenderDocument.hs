@@ -20,7 +20,7 @@ import System.Directory (doesFileExist, doesDirectoryExist
     , getModificationTime, copyFileWithMetadata)
 import System.Exit (ExitCode(..))
 import System.FilePath.Posix (takeBaseName, takeFileName, takeExtension
-    , replaceExtension)
+    , replaceExtension, splitFileName)
 import System.IO (withFile, IOMode(WriteMode), hPutStrLn)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
@@ -96,10 +96,11 @@ setupTargetFile name = do
     first <- case lookupOptionFlag "default-preamble" params of
         Nothing     -> return []
         Just True   -> do
-            let target = tmpdir ++ "/00_Beginning.tex"
+            let name = "00_Beginning.tex"
+            let target = tmpdir ++ "/" ++ name
             liftIO $ withFile target WriteMode $ \handle -> do
                 hWrite handle preamble
-            return [target]
+            return [name]
         Just _      -> invalid
 
     let env = Env
@@ -176,7 +177,8 @@ convertMarkdown file =
   in do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
-        target = tmpdir ++ "/" ++ replaceExtension file ".tex"
+        file' = replaceExtension file ".tex"
+        target = tmpdir ++ "/" ++ file'
         files = intermediateFilenamesFrom env
 
     ensureDirectory target
@@ -191,7 +193,7 @@ convertMarkdown file =
             T.hPutStrLn handle latex
             T.hPutStr handle "\n"
 
-    let env' = env { intermediateFilenamesFrom = target:files }
+    let env' = env { intermediateFilenamesFrom = file':files }
     setApplicationState env'
 
 {-
@@ -256,16 +258,19 @@ produceResult = do
     files' <- case lookupOptionFlag "default-preamble" params of
         Nothing     -> return files
         Just True   -> do
-            let target = tmpdir ++ "/ZZ_Ending.tex"
+            let name = "ZZ_Ending.tex"
+            let target = tmpdir ++ "/" ++ name
             liftIO $ withFile target WriteMode $ \handle -> do
                 hWrite handle ending
-            return (target:files)
+            return (name:files)
         Just _      -> invalid
 
     debugS "master" master
     liftIO $ withFile master WriteMode $ \handle -> do
+        hPutStrLn handle ("\\RequirePackage{import}")
         forM_ (reverse files') $ \file -> do
-            hPutStrLn handle ("\\input{" ++ file ++ "}")
+            let (path,name) = splitFileName file
+            hPutStrLn handle ("\\subimport{" ++ path ++ "}{" ++ name ++ "}")
 
 
 renderPDF :: Program Env ()
