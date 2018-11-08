@@ -8,14 +8,15 @@ where
 import Core.Text
 import qualified Data.ByteString.Lazy.Char8 as L
 
---
--- The build command returned a non-zero exit code, so there is a
--- reasonable assumption that there is indeed an error to be extracted.
---
-parseOutputForError :: FilePath -> L.ByteString -> Rope
-parseOutputForError file =
+{-
+The build command returned a non-zero exit code, so there is a
+reasonable assumption that there is indeed an error to be extracted.
+-}
+-- Originally written in lazy ByteString as that is output from readProcess
+parseOutputForError :: FilePath -> Rope -> Rope
+parseOutputForError tmpdir =
   let
-    needle = L.snoc (L.pack file)  ':'
+    needle = L.pack tmpdir
 
     stripBeginning [] = []
     stripBeginning (b:bs) = if L.isPrefixOf needle b
@@ -27,7 +28,7 @@ parseOutputForError file =
         then []
         else b : dropEnding bs
   in
-    intoRope . L.intercalate "\n" . dropEnding . stripBeginning . L.lines
+    intoRope . L.intercalate "\n" . dropEnding . stripBeginning . L.lines . fromRope
 
 
 -- Error stream from xelatex looks like this:
