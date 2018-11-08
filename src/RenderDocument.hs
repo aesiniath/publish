@@ -204,14 +204,15 @@ passthroughLaTeX :: FilePath -> Program Env ()
 passthroughLaTeX file = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
-        target = tmpdir ++ "/" ++ takeBaseName file ++ ".tex"
+        file' = replaceExtension file ".tex"
+        target = tmpdir ++ "/" ++ file'
         files = intermediateFilenamesFrom env
 
     ensureDirectory target
     liftIO $ do
         copyFileWithMetadata file target
 
-    let env' = env { intermediateFilenamesFrom = target:files }
+    let env' = env { intermediateFilenamesFrom = file':files }
     setApplicationState env'
 
 {-
