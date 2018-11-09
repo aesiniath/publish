@@ -2,13 +2,6 @@ resolver: lts-12.12
 packages:
  - /home/andrew/src/oprdyn/unbeliever
  - .
-extra-deps:
- - /home/andrew/vcs/haskell/pandoc-types
- - /home/andrew/vcs/haskell/pandoc
- - haddock-library-1.6.0
- - skylighting-0.7.2
- - skylighting-core-0.7.2
- - texmath-0.11.0.1
 
 build:
   haddock: false
