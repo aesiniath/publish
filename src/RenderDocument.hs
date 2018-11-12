@@ -73,7 +73,7 @@ extractBookFile = do
         Just bookfile -> return bookfile
 
 setupTargetFile :: FilePath -> Program Env ()
-setupTargetFile name = do
+setupTargetFile book = do
     tmpdir <- liftIO $ catch
         (do
             dir' <- readFile dotfile
@@ -114,7 +114,7 @@ setupTargetFile name = do
   where
     dotfile = ".target"
 
-    base = takeBaseName name -- "/directory/file.ext" -> "file"
+    base = takeBaseName book -- "/directory/file.ext" -> "file"
 
     boom = userError "Temp dir no longer present"
 
