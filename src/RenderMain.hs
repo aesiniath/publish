@@ -18,6 +18,10 @@ main = do
             for getting started a suitable default can be employed via this
             option.
           |]
+        , Option "docker" Nothing [quote|
+            Run the specified image in a container, mount the temporary
+            directory into it as a volume, and do the build there.
+          |]
         , Argument "bookfile" [quote|
             The file containing the list of fragments making up this book.
             If the argument is specified as "Hobbit.book" then "Hobbit"

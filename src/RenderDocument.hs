@@ -282,15 +282,30 @@ renderPDF = do
         result = resultFilenameFrom env
         tmpdir = tempDirectoryFrom env
 
-        latexmk =
-            [ "latexmk"
-            , "-xelatex"
-            , "-output-directory=" ++ tmpdir
-            , "-interaction=nonstopmode"
-            , "-halt-on-error"
-            , "-file-line-error"
-            , master
-            ]
+    params <- getCommandLine
+    let command = case lookupOptionValue "docker" params of
+            Just image  ->
+                [ "docker"
+                , "run"
+                , "--rm=true"
+                , "--volume=" ++ tmpdir ++ ":" ++ tmpdir
+                , image
+                , "latexmk"
+                ]
+            Nothing ->
+                [ "latexmk"
+                ]
+
+        options =
+                [ "-xelatex"
+                , "-output-directory=" ++ tmpdir
+                , "-interaction=nonstopmode"
+                , "-halt-on-error"
+                , "-file-line-error"
+                , master
+                ]
+
+        latexmk = command ++ options
 
     debugS "result" result
     (exit,out,err) <- execProcess latexmk
