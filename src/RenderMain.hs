@@ -19,8 +19,10 @@ main = do
             option.
           |]
         , Option "docker" Nothing [quote|
-            Run the specified image in a container, mount the temporary
-            directory into it as a volume, and do the build there.
+            Run the specified Docker image in a container, mount the target
+            directory into it as a volume, and do the build there. This allows
+            you to have all of the LaTeX dependencies separate from the machine
+            you are editing on.
           |]
         , Argument "bookfile" [quote|
             The file containing the list of fragments making up this book.
