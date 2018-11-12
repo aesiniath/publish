@@ -6,22 +6,22 @@ printing means using a toolchain different than those used to assemble
 content into web pages. LaTeX processors are the dominant way to typeset
 documents, but while the results can be beautiful it is an environment
 which has accreted cruft over decades and can be difficult to use. We have
-faith all the Gods in the Computing Pantheon will someday grant us peace
+faith that the gods in the computing pantheon will someday grant us peace
 (e.g. the end of the editor wars) and better tools (or at least ones that
 give useful error messages), but while we wait for the millennium (when
 LaTeX will be replaced with something whose syntax doesn't make your eyes
-bleed) we wanted to see if we could make a slightly less unpleasant
+bleed) we wanted to see if we could offer a slightly less unpleasant
 authoring experience.
 
 Ideally we could:
 
-  - write content in lightly marked up plain text (_i.e._ Markdown) as much as
+  - write content in lightly marked-up plain text (_i.e._ Markdown) as much as
     possible;
 
   - use localized typesetting commands inline when slightly greater
     expressiveness is needed; and
 
-  - just pass-through entire blobs of LaTeX when complex incantations and
+  - directly pass-through entire blobs of LaTeX when complex incantations and
     arcane summonings are necessary to appease the vengeful daemons who
     make the office printer work.
 
