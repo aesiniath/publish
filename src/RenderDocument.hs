@@ -24,6 +24,7 @@ import System.FilePath.Posix (takeBaseName, takeFileName, takeExtension
 import System.IO (withFile, IOMode(WriteMode), hPutStrLn)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
+import System.Posix.User (getEffectiveUserID, getEffectiveGroupID)
 import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
     , readerExtensions, pandocExtensions, writerTopLevelDivision
     , TopLevelDivision(TopLevelChapter))
@@ -273,6 +274,11 @@ produceResult = do
             let (path,name) = splitFileName file
             hPutStrLn handle ("\\subimport{" ++ path ++ "}{" ++ name ++ "}")
 
+getUserID :: Program a String
+getUserID = liftIO $ do
+    uid <- getEffectiveUserID
+    gid <- getEffectiveGroupID
+    return (show uid ++ ":" ++ show gid)
 
 renderPDF :: Program Env ()
 renderPDF = do
@@ -282,6 +288,8 @@ renderPDF = do
         result = resultFilenameFrom env
         tmpdir = tempDirectoryFrom env
 
+    user <- getUserID
+
     params <- getCommandLine
     let command = case lookupOptionValue "docker" params of
             Just image  ->
@@ -289,6 +297,7 @@ renderPDF = do
                 , "run"
                 , "--rm=true"
                 , "--volume=" ++ tmpdir ++ ":" ++ tmpdir
+                , "--user=" ++ user
                 , image
                 , "latexmk"
                 ]
