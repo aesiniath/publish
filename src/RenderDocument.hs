@@ -149,7 +149,7 @@ processFragment file = do
         ".markdown" -> convertMarkdown file
         ".latex"    -> passthroughLaTeX file
         ".svg"      -> generateImage file
-        _           -> error "Unknown file extension"
+        _           -> copyImageToTemp file
 
 {-
 Convert Markdown to LaTeX. This is where we "call" Pandoc.
@@ -244,6 +244,16 @@ generateImage file = do
             debug "stdout" (intoRope out)
             throw exit
         ExitSuccess -> return ()
+
+copyImageToTemp :: FilePath -> Program Env ()
+copyImageToTemp file = do
+    env <- getApplicationState
+    let tmpdir = tempDirectoryFrom env
+        target = tmpdir ++ "/" ++ file
+
+    ensureDirectory target
+    liftIO $ do
+        copyFileWithMetadata file target
 
 
 {-
