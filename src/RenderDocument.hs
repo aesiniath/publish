@@ -24,6 +24,7 @@ import System.FilePath.Posix (takeBaseName, takeFileName, takeExtension
 import System.IO (withFile, IOMode(WriteMode), hPutStrLn)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
+import System.Posix.User (getEffectiveUserID, getEffectiveGroupID)
 import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
     , readerExtensions, pandocExtensions, writerTopLevelDivision
     , TopLevelDivision(TopLevelChapter))
@@ -72,7 +73,7 @@ extractBookFile = do
         Just bookfile -> return bookfile
 
 setupTargetFile :: FilePath -> Program Env ()
-setupTargetFile name = do
+setupTargetFile book = do
     tmpdir <- liftIO $ catch
         (do
             dir' <- readFile dotfile
@@ -113,7 +114,7 @@ setupTargetFile name = do
   where
     dotfile = ".target"
 
-    base = takeBaseName name -- "/directory/file.ext" -> "file"
+    base = takeBaseName book -- "/directory/file.ext" -> "file"
 
     boom = userError "Temp dir no longer present"
 
@@ -148,7 +149,7 @@ processFragment file = do
         ".markdown" -> convertMarkdown file
         ".latex"    -> passthroughLaTeX file
         ".svg"      -> generateImage file
-        _           -> error "Unknown file extension"
+        _           -> copyImageToTemp file
 
 {-
 Convert Markdown to LaTeX. This is where we "call" Pandoc.
@@ -244,6 +245,16 @@ generateImage file = do
             throw exit
         ExitSuccess -> return ()
 
+copyImageToTemp :: FilePath -> Program Env ()
+copyImageToTemp file = do
+    env <- getApplicationState
+    let tmpdir = tempDirectoryFrom env
+        target = tmpdir ++ "/" ++ file
+
+    ensureDirectory target
+    liftIO $ do
+        copyFileWithMetadata file target
+
 
 {-
 Finish up by writing the intermediate "master" file.
@@ -273,6 +284,11 @@ produceResult = do
             let (path,name) = splitFileName file
             hPutStrLn handle ("\\subimport{" ++ path ++ "}{" ++ name ++ "}")
 
+getUserID :: Program a String
+getUserID = liftIO $ do
+    uid <- getEffectiveUserID
+    gid <- getEffectiveGroupID
+    return (show uid ++ ":" ++ show gid)
 
 renderPDF :: Program Env ()
 renderPDF = do
@@ -282,15 +298,33 @@ renderPDF = do
         result = resultFilenameFrom env
         tmpdir = tempDirectoryFrom env
 
-        latexmk =
-            [ "latexmk"
-            , "-xelatex"
-            , "-output-directory=" ++ tmpdir
-            , "-interaction=nonstopmode"
-            , "-halt-on-error"
-            , "-file-line-error"
-            , master
-            ]
+    user <- getUserID
+
+    params <- getCommandLine
+    let command = case lookupOptionValue "docker" params of
+            Just image  ->
+                [ "docker"
+                , "run"
+                , "--rm=true"
+                , "--volume=" ++ tmpdir ++ ":" ++ tmpdir
+                , "--user=" ++ user
+                , image
+                , "latexmk"
+                ]
+            Nothing ->
+                [ "latexmk"
+                ]
+
+        options =
+                [ "-xelatex"
+                , "-output-directory=" ++ tmpdir
+                , "-interaction=nonstopmode"
+                , "-halt-on-error"
+                , "-file-line-error"
+                , master
+                ]
+
+        latexmk = command ++ options
 
     debugS "result" result
     (exit,out,err) <- execProcess latexmk

@@ -6,17 +6,24 @@ module Main where
 import Core.Program
 import Core.Text
 import RenderDocument (program, initial)
+import Paths_publish (version)
 
 
 main :: IO ()
 main = do
-    context <- configure initial (simple
-        [ Option "default-preamble" (Just 'p') [quote|
+    context <- configure (fromPackage version) initial (simple
+        [ Option "default-preamble" (Just 'p') Empty [quote|
             Wrap a built-in default LaTeX preamble (and ending) around your
             supplied source fragments. Most documents will put their own
             custom preamble as the first fragment in the .book file, but
             for getting started a suitable default can be employed via this
             option.
+          |]
+        , Option "docker" Nothing (Value "IMAGE") [quote|
+            Run the specified Docker image in a container, mount the target
+            directory into it as a volume, and do the build there. This allows
+            you to have all of the LaTeX dependencies separate from the machine
+            you are editing on.
           |]
         , Argument "bookfile" [quote|
             The file containing the list of fragments making up this book.
