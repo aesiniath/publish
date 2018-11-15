@@ -18,7 +18,7 @@ dependencies:
  - pandoc
  - text
  - typed-process
- - unbeliever >= 0.5
+ - unbeliever >= 0.6
  - unix
  - unordered-containers
 
@@ -33,3 +33,4 @@ executables:
      - LatexPreamble
      - OutputParser
      - Utilities
+     - Paths_publish

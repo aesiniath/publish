@@ -6,11 +6,12 @@ module Main where
 import Core.Program
 import Core.Text
 import RenderDocument (program, initial)
+import Paths_publish (version)
 
 
 main :: IO ()
 main = do
-    context <- configure initial (simple
+    context <- configure (fromPackage version) initial (simple
         [ Option "default-preamble" (Just 'p') Empty [quote|
             Wrap a built-in default LaTeX preamble (and ending) around your
             supplied source fragments. Most documents will put their own
