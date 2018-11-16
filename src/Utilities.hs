@@ -5,7 +5,7 @@
 module Utilities
     ( ensureDirectory
     , execProcess
-    , copyFileIfNewer
+    , ifNewer
     )
 where
 
@@ -57,21 +57,10 @@ execProcess (cmd:args) =
 
     return (exit, intoRope out, intoRope err)
 
-{-
-Copy the source file to the destination, unless the target already exists
-and is newer than the source.
--}
-copyFileIfNewer :: FilePath -> FilePath -> Program t ()
-copyFileIfNewer source target = do
-    ifNewer source target $ do
-        debugS "target" target
-        liftIO $ do
-            copyFileWithMetadata source target
-
 {-|
 If the source file is newer than the target file, then run an action. For
 example, if you want to install a file but only do so if the file has been
-rebuilt, then you could use this:
+rebuilt, then you could do this:
 
 @
 copyFileIfNewer :: 'FilePath' -> 'FilePath' -> 'Program' τ ()

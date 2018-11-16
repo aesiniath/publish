@@ -1,5 +1,5 @@
 name: publish
-version:  0.1.6
+version:  0.1.7
 synopsis: Publishing tools for papers, books, and presentations
 license: BSD3
 license-file: LICENCE
@@ -12,6 +12,7 @@ tested-with: GHC == 8.4
 dependencies:
  - base
  - bytestring
+ - chronologique
  - directory
  - filepath
  - pandoc-types
