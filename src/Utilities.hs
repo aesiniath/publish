@@ -1,18 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Utilities
     ( ensureDirectory
     , execProcess
+    , copyFileIfNewer
     )
 where
 
+import Chrono.Compat (convertToUTC)
 import Control.Monad (when)
 import Core.Program
 import Core.System
 import Core.Text
 import qualified Data.List as List (intercalate)
-import System.Directory (doesDirectoryExist, createDirectory)
+import System.Directory (doesDirectoryExist, doesFileExist, createDirectory
+    , getModificationTime, copyFileWithMetadata)
 import System.Exit (ExitCode(..))
 import System.FilePath.Posix (takeDirectory)
 import System.Process.Typed (proc, readProcess, setStdin, closed)
@@ -21,7 +25,7 @@ import System.Process.Typed (proc, readProcess, setStdin, closed)
 Some source files live in subdirectories. Replicate that directory
 structure in the temporary build space
 -}
-ensureDirectory :: FilePath -> Program a ()
+ensureDirectory :: FilePath -> Program t ()
 ensureDirectory target =
   let
      subdir = takeDirectory target
@@ -38,7 +42,7 @@ for you.
 
 TODO this could potentially move to the **unbeliever** library
 -}
-execProcess :: [String] -> Program a (ExitCode, Rope, Rope)
+execProcess :: [String] -> Program t (ExitCode, Rope, Rope)
 execProcess [] = error "No command provided"
 execProcess (cmd:args) =
   let
@@ -52,3 +56,21 @@ execProcess (cmd:args) =
         readProcess task'
 
     return (exit, intoRope out, intoRope err)
+
+{-
+Copy the source file to the destination, unless the target already exists
+and is newer than the source.
+
+TODO this could potentially move to the **unbeliever** library
+-}
+copyFileIfNewer :: FilePath -> FilePath -> Program t ()
+copyFileIfNewer source target = do
+    withContext $ \runProgram -> do
+        time1 <- getModificationTime source
+        time2 <- doesFileExist target >>= \case
+            True  -> getModificationTime target
+            False -> return (convertToUTC 0)        -- the epoch
+        when (time1 > time2) $ do
+            runProgram $ do
+                debugS "target" target
+            copyFileWithMetadata source target

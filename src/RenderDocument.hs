@@ -31,7 +31,7 @@ import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
 
 import LatexPreamble (preamble, ending)
 import OutputParser (parseOutputForError)
-import Utilities (ensureDirectory, execProcess)
+import Utilities (ensureDirectory, execProcess, copyFileIfNewer)
 
 data Env = Env
     { intermediateFilenamesFrom :: [FilePath]
@@ -148,8 +148,8 @@ processFragment file = do
     case takeExtension file of
         ".markdown" -> convertMarkdown file
         ".latex"    -> passthroughLaTeX file
-        ".svg"      -> generateImage file
-        _           -> copyImageToTemp file
+        ".svg"      -> convertImage file
+        _           -> passthroughImage file
 
 {-
 Convert Markdown to LaTeX. This is where we "call" Pandoc.
@@ -210,8 +210,7 @@ passthroughLaTeX file = do
         files = intermediateFilenamesFrom env
 
     ensureDirectory target
-    liftIO $ do
-        copyFileWithMetadata file target
+    copyFileIfNewer file target
 
     let env' = env { intermediateFilenamesFrom = file':files }
     setApplicationState env'
@@ -221,8 +220,8 @@ Images in SVG format need to be converted to PDF to be able to be
 included in the output as LaTeX doesn't understand SVG natively, which
 is slightly shocking.
 -}
-generateImage :: FilePath -> Program Env ()
-generateImage file = do
+convertImage :: FilePath -> Program Env ()
+convertImage file = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
         target = tmpdir ++ "/" ++ replaceExtension file ".pdf"
@@ -245,15 +244,14 @@ generateImage file = do
             throw exit
         ExitSuccess -> return ()
 
-copyImageToTemp :: FilePath -> Program Env ()
-copyImageToTemp file = do
+passthroughImage :: FilePath -> Program Env ()
+passthroughImage file = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
         target = tmpdir ++ "/" ++ file
 
     ensureDirectory target
-    liftIO $ do
-        copyFileWithMetadata file target
+    copyFileIfNewer file target
 
 
 {-
