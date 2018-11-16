@@ -60,17 +60,37 @@ execProcess (cmd:args) =
 {-
 Copy the source file to the destination, unless the target already exists
 and is newer than the source.
-
-TODO this could potentially move to the **unbeliever** library
 -}
 copyFileIfNewer :: FilePath -> FilePath -> Program t ()
 copyFileIfNewer source target = do
+    ifNewer source target $ do
+        debugS "target" target
+        liftIO $ do
+            copyFileWithMetadata source target
+
+{-|
+If the source file is newer than the target file, then run an action. For
+example, if you want to install a file but only do so if the file has been
+rebuilt, then you could use this:
+
+@
+copyFileIfNewer :: 'FilePath' -> 'FilePath' -> 'Program' τ ()
+copyFileIfNewer source target = do
+    'ifNewer' source target $ do
+        'liftIO' ('copyFileWithMetadata' source target)
+@
+
+This is basically a build system in a box, although the usual caveats
+about the brittleness of timestamps apply.
+
+TODO this could potentially move to the **unbeliever** library
+-}
+ifNewer :: FilePath -> FilePath -> Program t () -> Program t ()
+ifNewer source target program = do
     withContext $ \runProgram -> do
         time1 <- getModificationTime source
         time2 <- doesFileExist target >>= \case
             True  -> getModificationTime target
             False -> return (convertToUTC 0)        -- the epoch
         when (time1 > time2) $ do
-            runProgram $ do
-                debugS "target" target
-            copyFileWithMetadata source target
+            runProgram program
