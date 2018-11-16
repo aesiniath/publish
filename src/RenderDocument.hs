@@ -31,7 +31,7 @@ import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
 
 import LatexPreamble (preamble, ending)
 import OutputParser (parseOutputForError)
-import Utilities (ensureDirectory, execProcess)
+import Utilities (ensureDirectory, execProcess, ifNewer)
 
 data Env = Env
     { intermediateFilenamesFrom :: [FilePath]
@@ -142,14 +142,14 @@ filename extension.
 -}
 processFragment :: FilePath -> Program Env ()
 processFragment file = do
-    debugS "fragment" file
+    debugS "source" file
 
     -- Read the fragment, process it if Markdown then run it out to LaTeX.
     case takeExtension file of
         ".markdown" -> convertMarkdown file
         ".latex"    -> passthroughLaTeX file
-        ".svg"      -> generateImage file
-        _           -> copyImageToTemp file
+        ".svg"      -> convertImage file
+        _           -> passthroughImage file
 
 {-
 Convert Markdown to LaTeX. This is where we "call" Pandoc.
@@ -183,16 +183,18 @@ convertMarkdown file =
         files = intermediateFilenamesFrom env
 
     ensureDirectory target
-    liftIO $ do
-        contents <- T.readFile file
+    ifNewer file target $ do
+        debugS "target" target
+        liftIO $ do
+            contents <- T.readFile file
 
-        latex <- runIOorExplode $ do
-            parsed <- readMarkdown readingOptions contents
-            writeLaTeX writingOptions parsed
+            latex <- runIOorExplode $ do
+                parsed <- readMarkdown readingOptions contents
+                writeLaTeX writingOptions parsed
 
-        withFile target WriteMode $ \handle -> do
-            T.hPutStrLn handle latex
-            T.hPutStr handle "\n"
+            withFile target WriteMode $ \handle -> do
+                T.hPutStrLn handle latex
+                T.hPutStr handle "\n"
 
     let env' = env { intermediateFilenamesFrom = file':files }
     setApplicationState env'
@@ -210,8 +212,10 @@ passthroughLaTeX file = do
         files = intermediateFilenamesFrom env
 
     ensureDirectory target
-    liftIO $ do
-        copyFileWithMetadata file target
+    ifNewer file target $ do
+        debugS "target" target
+        liftIO $ do
+            copyFileWithMetadata file target
 
     let env' = env { intermediateFilenamesFrom = file':files }
     setApplicationState env'
@@ -221,8 +225,8 @@ Images in SVG format need to be converted to PDF to be able to be
 included in the output as LaTeX doesn't understand SVG natively, which
 is slightly shocking.
 -}
-generateImage :: FilePath -> Program Env ()
-generateImage file = do
+convertImage :: FilePath -> Program Env ()
+convertImage file = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
         target = tmpdir ++ "/" ++ replaceExtension file ".pdf"
@@ -234,27 +238,31 @@ generateImage file = do
             , file
             ]
 
-    (exit,out,err) <- do
-        ensureDirectory target
-        execProcess rsvgConvert
-    case exit of
-        ExitFailure _ ->  do
-            event "Image processing failed"
-            debug "stderr" (intoRope err)
-            debug "stdout" (intoRope out)
-            throw exit
-        ExitSuccess -> return ()
+    ifNewer file target $ do
+        debugS "target" target
+        (exit,out,err) <- do
+            ensureDirectory target
+            execProcess rsvgConvert
 
-copyImageToTemp :: FilePath -> Program Env ()
-copyImageToTemp file = do
+        case exit of
+            ExitFailure _ ->  do
+                event "Image processing failed"
+                debug "stderr" (intoRope err)
+                debug "stdout" (intoRope out)
+                throw exit
+            ExitSuccess -> return ()
+
+passthroughImage :: FilePath -> Program Env ()
+passthroughImage file = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
         target = tmpdir ++ "/" ++ file
 
     ensureDirectory target
-    liftIO $ do
-        copyFileWithMetadata file target
-
+    ifNewer file target $ do
+        debugS "target" target
+        liftIO $ do
+            copyFileWithMetadata file target
 
 {-
 Finish up by writing the intermediate "master" file.
@@ -295,7 +303,6 @@ renderPDF = do
     env <- getApplicationState
 
     let master = masterFilenameFrom env
-        result = resultFilenameFrom env
         tmpdir = tempDirectoryFrom env
 
     user <- getUserID
@@ -326,7 +333,6 @@ renderPDF = do
 
         latexmk = command ++ options
 
-    debugS "result" result
     (exit,out,err) <- execProcess latexmk
     case exit of
         ExitFailure _ ->  do
@@ -342,14 +348,10 @@ copyHere = do
     env <- getApplicationState
     let result = resultFilenameFrom env
         final = takeFileName result             -- ie ./Book.pdf
-    withContext $ \runProgram -> do
-        time1 <- getModificationTime result
-        exists <- doesFileExist final
-        time2 <- if exists
-            then getModificationTime final
-            else getModificationTime "/proc"    -- boot time!
-        when (time1 > time2) $ do
-            runProgram $ do
-                event "Copy resultant document here"
-                debugS "final" final
+
+    ifNewer result final $ do
+        event "Copy resultant document here"
+        debugS "result" result
+        debugS "final" final
+        liftIO $ do
             copyFileWithMetadata result final
