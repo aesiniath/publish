@@ -15,11 +15,8 @@ import System.INotify (EventVariety(..), Event(..), withINotify
 
 import Environment
 
-waitForChange :: Program Env () 
-waitForChange = do
-    env <- getApplicationState
-    let files = intermediateFilenamesFrom env
-
+waitForChange :: [FilePath] -> Program t ()
+waitForChange files = do
     withContext $ \runProgram -> do
         block <- newEmptyMVar
         withINotify $ \notify -> do

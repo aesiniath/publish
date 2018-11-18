@@ -6,7 +6,7 @@ module RenderDocument
     )
 where
 
-import Control.Monad (filterM, when, forM_, forever)
+import Control.Monad (filterM, when, forM_, forever, void)
 import Core.Program
 import Core.System
 import Core.Text
@@ -40,14 +40,14 @@ program = do
     case lookupOptionFlag "watch" params of
         Nothing -> do
             -- normal operation, single pass
-            renderDocument
+            void (renderDocument)
         Just False -> invalid
         Just True  -> do
             -- use inotify to rebuild on changes
-            forever (renderDocument >> waitForChange)
+            forever (renderDocument >>= waitForChange)
 
 
-renderDocument :: Program Env ()
+renderDocument :: Program Env [FilePath]
 renderDocument = do
     bookfile <- extractBookFile
 
@@ -68,6 +68,7 @@ renderDocument = do
     copyHere
 
     event "Complete"
+    return files
 
 
 extractBookFile :: Program Env FilePath
