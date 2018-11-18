@@ -3,11 +3,10 @@
 
 module RenderDocument
     ( program
-    , initial
     )
 where
 
-import Control.Monad (filterM, when, forM_)
+import Control.Monad (filterM, when, forM_, forever)
 import Core.Program
 import Core.System
 import Core.Text
@@ -29,22 +28,27 @@ import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
     , readerExtensions, pandocExtensions, writerTopLevelDivision
     , TopLevelDivision(TopLevelChapter))
 
+import Environment (Env(..))
+import NotifyChanges (waitForChange)
 import LatexPreamble (preamble, ending)
 import OutputParser (parseOutputForError)
 import Utilities (ensureDirectory, execProcess, ifNewer)
 
-data Env = Env
-    { intermediateFilenamesFrom :: [FilePath]
-    , masterFilenameFrom :: FilePath
-    , resultFilenameFrom :: FilePath
-    , tempDirectoryFrom :: FilePath
-    }
-
-initial :: Env
-initial = Env [] "" "" ""
-
 program :: Program Env ()
 program = do
+    params <- getCommandLine
+    case lookupOptionFlag "watch" params of
+        Nothing -> do
+            -- normal operation, single pass
+            renderDocument
+        Just False -> invalid
+        Just True  -> do
+            -- use inotify to rebuild on changes
+            forever (renderDocument >> waitForChange)
+
+
+renderDocument :: Program Env ()
+renderDocument = do
     bookfile <- extractBookFile
 
     event "Reading bookfile"
@@ -64,6 +68,7 @@ program = do
     copyHere
 
     event "Complete"
+
 
 extractBookFile :: Program Env FilePath
 extractBookFile = do

@@ -15,6 +15,7 @@ dependencies:
  - chronologique
  - directory
  - filepath
+ - fsnotify
  - pandoc-types
  - pandoc
  - text

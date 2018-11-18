@@ -5,8 +5,10 @@ module Main where
 
 import Core.Program
 import Core.Text
-import RenderDocument (program, initial)
+
+import RenderDocument (program)
 import Paths_publish (version)
+import Environment (initial)
 
 
 main :: IO ()
