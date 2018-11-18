@@ -68,7 +68,7 @@ renderDocument = do
     copyHere
 
     event "Complete"
-    return files
+    return (bookfile:files)
 
 
 extractBookFile :: Program Env FilePath
