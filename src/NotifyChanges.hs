@@ -7,7 +7,8 @@ where
 import Core.Program
 import Core.System
 import Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, readMVar)
-import System.FSNotify (Event(..), eventPath, withManager, watchTree)
+import System.INotify (EventVariety(..), Event(..), withINotify
+    , addWatch, removeWatch)
 
 import Environment
 
@@ -15,18 +16,18 @@ waitForChange :: Program Env ()
 waitForChange = do
     withContext $ \runProgram -> do
         block <- newEmptyMVar
-        withManager $ \manager -> do
-            stop <- watchTree manager 
+        withINotify $ \notify -> do
+            watch <- addWatch
+                notify
+                [CloseWrite]
                 "."
                 (\event -> case event of
-                    Modified _ _ False  -> True
-                    _                   -> False)
-                (\event -> do
-                    runProgram (debugS "path" (eventPath event))
-                    putMVar block False)
-
+                    Closed _ path _  -> do
+                        runProgram (debugS "path" path)
+                        putMVar block False
+                    _ -> return ())
             -- wait
             readMVar block
-            stop
+            removeWatch watch
 
 
