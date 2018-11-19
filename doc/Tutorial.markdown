@@ -98,7 +98,7 @@ you can freely do so. There is also an option to run the render in a
 Docker container.
 
 ```shell
-$ render --default-preamble --docker=afcowie/publish-default:latest Trees.book
+$ render --default-preamble --docker=oprdyn/publish-default:latest Trees.book
 $
 ```
 
