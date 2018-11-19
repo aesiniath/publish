@@ -5,8 +5,10 @@ module Main where
 
 import Core.Program
 import Core.Text
-import RenderDocument (program, initial)
+
+import RenderDocument (program)
 import Paths_publish (version)
+import Environment (initial)
 
 
 main :: IO ()
@@ -18,6 +20,10 @@ main = do
             custom preamble as the first fragment in the .book file, but
             for getting started a suitable default can be employed via this
             option.
+          |]
+        , Option "watch" Nothing Empty [quote|
+            Watch all sources listed in the bookfile and re-run the
+            rendering engine if changes are detected.
           |]
         , Option "docker" Nothing (Value "IMAGE") [quote|
             Run the specified Docker image in a container, mount the target

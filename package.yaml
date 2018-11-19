@@ -1,5 +1,5 @@
 name: publish
-version:  0.1.7
+version:  0.2.1
 synopsis: Publishing tools for papers, books, and presentations
 license: BSD3
 license-file: LICENCE
@@ -15,6 +15,7 @@ dependencies:
  - chronologique
  - directory
  - filepath
+ - hinotify
  - pandoc-types
  - pandoc
  - text
@@ -31,7 +32,9 @@ executables:
     main: RenderMain.hs
     other-modules:
      - RenderDocument
+     - Environment
      - LatexPreamble
+     - NotifyChanges
      - OutputParser
-     - Utilities
      - Paths_publish
+     - Utilities
