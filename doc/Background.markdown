@@ -20,9 +20,11 @@ For certain audiences, however, getting high-quality printed output on
 primary requirement. These users include
 
  - researchers needing to document results;
+ - students submitting essays and other papers;
+ - engineers writing requirements, design, and system documentation;
  - business and organizations wishing to circulate content for review and
    approval;
- - writers wishing to produce their work in manuscript form suitable for
+ - authors wishing to produce their work in manuscript form suitable for
    editing;
  - publishers needing to do typesetting and actual pre-press rendering of
    manuscripts into "camera ready" form; and
