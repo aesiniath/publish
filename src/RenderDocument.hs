@@ -3,11 +3,10 @@
 
 module RenderDocument
     ( program
-    , initial
     )
 where
 
-import Control.Monad (filterM, when, forM_)
+import Control.Monad (filterM, when, forM_, forever, void)
 import Core.Program
 import Core.System
 import Core.Text
@@ -24,26 +23,32 @@ import System.FilePath.Posix (takeBaseName, takeFileName, takeExtension
 import System.IO (withFile, IOMode(WriteMode), hPutStrLn)
 import System.IO.Error (userError, IOError)
 import System.Posix.Temp (mkdtemp)
+import System.Posix.User (getEffectiveUserID, getEffectiveGroupID)
 import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
     , readerExtensions, pandocExtensions, writerTopLevelDivision
     , TopLevelDivision(TopLevelChapter))
 
+import Environment (Env(..))
+import NotifyChanges (waitForChange)
 import LatexPreamble (preamble, ending)
 import OutputParser (parseOutputForError)
-import Utilities (ensureDirectory, execProcess)
-
-data Env = Env
-    { intermediateFilenamesFrom :: [FilePath]
-    , masterFilenameFrom :: FilePath
-    , resultFilenameFrom :: FilePath
-    , tempDirectoryFrom :: FilePath
-    }
-
-initial :: Env
-initial = Env [] "" "" ""
+import Utilities (ensureDirectory, execProcess, ifNewer)
 
 program :: Program Env ()
 program = do
+    params <- getCommandLine
+    case lookupOptionFlag "watch" params of
+        Nothing -> do
+            -- normal operation, single pass
+            void (renderDocument)
+        Just False -> invalid
+        Just True  -> do
+            -- use inotify to rebuild on changes
+            forever (renderDocument >>= waitForChange)
+
+
+renderDocument :: Program Env [FilePath]
+renderDocument = do
     bookfile <- extractBookFile
 
     event "Reading bookfile"
@@ -63,6 +68,8 @@ program = do
     copyHere
 
     event "Complete"
+    return (bookfile:files)
+
 
 extractBookFile :: Program Env FilePath
 extractBookFile = do
@@ -72,7 +79,7 @@ extractBookFile = do
         Just bookfile -> return bookfile
 
 setupTargetFile :: FilePath -> Program Env ()
-setupTargetFile name = do
+setupTargetFile book = do
     tmpdir <- liftIO $ catch
         (do
             dir' <- readFile dotfile
@@ -113,7 +120,7 @@ setupTargetFile name = do
   where
     dotfile = ".target"
 
-    base = takeBaseName name -- "/directory/file.ext" -> "file"
+    base = takeBaseName book -- "/directory/file.ext" -> "file"
 
     boom = userError "Temp dir no longer present"
 
@@ -141,14 +148,14 @@ filename extension.
 -}
 processFragment :: FilePath -> Program Env ()
 processFragment file = do
-    debugS "fragment" file
+    debugS "source" file
 
     -- Read the fragment, process it if Markdown then run it out to LaTeX.
     case takeExtension file of
         ".markdown" -> convertMarkdown file
         ".latex"    -> passthroughLaTeX file
-        ".svg"      -> generateImage file
-        _           -> error "Unknown file extension"
+        ".svg"      -> convertImage file
+        _           -> passthroughImage file
 
 {-
 Convert Markdown to LaTeX. This is where we "call" Pandoc.
@@ -182,16 +189,18 @@ convertMarkdown file =
         files = intermediateFilenamesFrom env
 
     ensureDirectory target
-    liftIO $ do
-        contents <- T.readFile file
+    ifNewer file target $ do
+        debugS "target" target
+        liftIO $ do
+            contents <- T.readFile file
 
-        latex <- runIOorExplode $ do
-            parsed <- readMarkdown readingOptions contents
-            writeLaTeX writingOptions parsed
+            latex <- runIOorExplode $ do
+                parsed <- readMarkdown readingOptions contents
+                writeLaTeX writingOptions parsed
 
-        withFile target WriteMode $ \handle -> do
-            T.hPutStrLn handle latex
-            T.hPutStr handle "\n"
+            withFile target WriteMode $ \handle -> do
+                T.hPutStrLn handle latex
+                T.hPutStr handle "\n"
 
     let env' = env { intermediateFilenamesFrom = file':files }
     setApplicationState env'
@@ -209,8 +218,10 @@ passthroughLaTeX file = do
         files = intermediateFilenamesFrom env
 
     ensureDirectory target
-    liftIO $ do
-        copyFileWithMetadata file target
+    ifNewer file target $ do
+        debugS "target" target
+        liftIO $ do
+            copyFileWithMetadata file target
 
     let env' = env { intermediateFilenamesFrom = file':files }
     setApplicationState env'
@@ -220,8 +231,8 @@ Images in SVG format need to be converted to PDF to be able to be
 included in the output as LaTeX doesn't understand SVG natively, which
 is slightly shocking.
 -}
-generateImage :: FilePath -> Program Env ()
-generateImage file = do
+convertImage :: FilePath -> Program Env ()
+convertImage file = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
         target = tmpdir ++ "/" ++ replaceExtension file ".pdf"
@@ -233,17 +244,31 @@ generateImage file = do
             , file
             ]
 
-    (exit,out,err) <- do
-        ensureDirectory target
-        execProcess rsvgConvert
-    case exit of
-        ExitFailure _ ->  do
-            event "Image processing failed"
-            debug "stderr" (intoRope err)
-            debug "stdout" (intoRope out)
-            throw exit
-        ExitSuccess -> return ()
+    ifNewer file target $ do
+        debugS "target" target
+        (exit,out,err) <- do
+            ensureDirectory target
+            execProcess rsvgConvert
 
+        case exit of
+            ExitFailure _ ->  do
+                event "Image processing failed"
+                debug "stderr" (intoRope err)
+                debug "stdout" (intoRope out)
+                throw exit
+            ExitSuccess -> return ()
+
+passthroughImage :: FilePath -> Program Env ()
+passthroughImage file = do
+    env <- getApplicationState
+    let tmpdir = tempDirectoryFrom env
+        target = tmpdir ++ "/" ++ file
+
+    ensureDirectory target
+    ifNewer file target $ do
+        debugS "target" target
+        liftIO $ do
+            copyFileWithMetadata file target
 
 {-
 Finish up by writing the intermediate "master" file.
@@ -273,26 +298,47 @@ produceResult = do
             let (path,name) = splitFileName file
             hPutStrLn handle ("\\subimport{" ++ path ++ "}{" ++ name ++ "}")
 
+getUserID :: Program a String
+getUserID = liftIO $ do
+    uid <- getEffectiveUserID
+    gid <- getEffectiveGroupID
+    return (show uid ++ ":" ++ show gid)
 
 renderPDF :: Program Env ()
 renderPDF = do
     env <- getApplicationState
 
     let master = masterFilenameFrom env
-        result = resultFilenameFrom env
         tmpdir = tempDirectoryFrom env
 
-        latexmk =
-            [ "latexmk"
-            , "-xelatex"
-            , "-output-directory=" ++ tmpdir
-            , "-interaction=nonstopmode"
-            , "-halt-on-error"
-            , "-file-line-error"
-            , master
-            ]
+    user <- getUserID
 
-    debugS "result" result
+    params <- getCommandLine
+    let command = case lookupOptionValue "docker" params of
+            Just image  ->
+                [ "docker"
+                , "run"
+                , "--rm=true"
+                , "--volume=" ++ tmpdir ++ ":" ++ tmpdir
+                , "--user=" ++ user
+                , image
+                , "latexmk"
+                ]
+            Nothing ->
+                [ "latexmk"
+                ]
+
+        options =
+                [ "-xelatex"
+                , "-output-directory=" ++ tmpdir
+                , "-interaction=nonstopmode"
+                , "-halt-on-error"
+                , "-file-line-error"
+                , master
+                ]
+
+        latexmk = command ++ options
+
     (exit,out,err) <- execProcess latexmk
     case exit of
         ExitFailure _ ->  do
@@ -308,14 +354,10 @@ copyHere = do
     env <- getApplicationState
     let result = resultFilenameFrom env
         final = takeFileName result             -- ie ./Book.pdf
-    withContext $ \runProgram -> do
-        time1 <- getModificationTime result
-        exists <- doesFileExist final
-        time2 <- if exists
-            then getModificationTime final
-            else getModificationTime "/proc"    -- boot time!
-        when (time1 > time2) $ do
-            runProgram $ do
-                event "Copy resultant document here"
-                debugS "final" final
+
+    ifNewer result final $ do
+        event "Copy resultant document here"
+        debugS "result" result
+        debugS "final" final
+        liftIO $ do
             copyFileWithMetadata result final
