@@ -11,7 +11,7 @@ import Core.Text
 
 preamble :: Rope
 preamble = [quote|
-\documentclass[12pt,a4paper,openany]{memoir}
+\documentclass[12pt,a4paper,oneside,openany]{memoir}
 
 %
 % Load the TeX Gyre project's "Heros" font, which is an upgrade of URW's
@@ -73,7 +73,7 @@ preamble = [quote|
 \pagestyle{plain}
 
 \SingleSpacing
-\traditionalparskip
+\nonzeroparskip
 \setlength{\parindent}{0em}
 
 %
