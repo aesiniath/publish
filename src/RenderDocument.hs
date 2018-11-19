@@ -67,7 +67,6 @@ renderDocument = do
     renderPDF
     copyHere
 
-    event "Complete"
     return (bookfile:files)
 
 
@@ -348,12 +347,13 @@ renderPDF = do
     (exit,out,err) <- execProcess latexmk
     case exit of
         ExitFailure _ ->  do
-            event "Render failed"
             debug "stderr" (intoRope err)
             debug "stdout" (intoRope out)
             write (parseOutputForError tmpdir out)
-            throw exit
-        ExitSuccess -> return ()
+            event "Render failed"
+--          throw exit
+        ExitSuccess -> do
+            event "Completed"
 
 copyHere :: Program Env ()
 copyHere = do
