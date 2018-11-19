@@ -1,26 +1,35 @@
 Background
 ==========
 
-Web pages on are the global standard for displaying and searching
-information but authoring content for them in raw HTML is tedious; this led
-to the advent of lightweight markup formats like Markdown that could easily
-be converted to HTML (it is no co-incidence that they represent documents
-using formatting conventions prevalent in the early days of the internet
-when users conveyed semantic information in text based mailing lists and
-Usenet newsgroups using such lightweight markup).
+Web pages are the global standard for displaying and searching information
+but authoring content for them in raw HTML is tedious. This led to the
+advent of lightweight markup formats like Markdown that could easily be
+converted to HTML (it is no co-incidence that these styles represent
+documents using formatting conventions that were evolved in the early days
+of the internet by users who wanted to conveyed semantic information in
+text-based mailing lists and Usenet newsgroups).
 
 Somewhat surprisingly, the web continues to struggle with taking content
-into print form. Perhaps browsers are so overwhelmed by their own success;
-certainly many people are happy to read content on screens surrounded by
-flashy banner ads.
+into print form. Perhaps browser vendors are so overwhelmed by their own
+success that they don't feel the need to cater for this use case; certainly
+many people are happy to read content on screens surrounded by flashy
+banner ads.
 
 For certain audiences, however, getting high-quality printed output on
 **paper** (or at least into a form that _could_ be printed to paper) is the
-primary requirement. These users include researchers needing to document
-results, business and organizations wishing to circulate content for review
-and approval, writers wishing to produce their work in manuscript form
-suitable for editing, and publishers needing to take content and actually
-do pre-press rendering into a form "camera ready".
+primary requirement. These users include
+
+ - researchers needing to document results;
+ - business and organizations wishing to circulate content for review and
+   approval;
+ - writers wishing to produce their work in manuscript form suitable for
+   editing;
+ - publishers needing to do typesetting and actual pre-press rendering of
+   manuscripts into "camera ready" form; and
+ - humans who don't like flashy banner ads.
+
+The challenges and complications of this process are...
+
 
 Images
 ------
@@ -42,7 +51,7 @@ describing vector graphics, and (again not something you would have thought
 of) you can include PDF fragments in \[what will become\] another PDF
 document using the `\inclugegraphics` command.
 
-See also:
+Further reading:
 
  - [Getting Started](doc/Tutorial.markdown)
  - [Examples](doc/Examples.markdown)
