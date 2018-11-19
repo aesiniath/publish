@@ -131,16 +131,22 @@ setupTargetFile book = do
 processBookFile :: FilePath -> Program Env [FilePath]
 processBookFile file = do
     debugS "bookfile" file
-    files <- liftIO $ do
-        contents <- T.readFile file
-        filterM doesFileExist (possibilities contents)
-
-    return files
+    contents <- liftIO (T.readFile file)
+    filterM skipNotFound (possibilities contents)
   where
     -- filter out blank lines and lines commented out
     possibilities :: Text -> [FilePath]
     possibilities = map T.unpack . filter (not . T.null)
         . filter (not . T.isPrefixOf "#") . T.lines
+
+    skipNotFound :: FilePath -> Program t Bool
+    skipNotFound fragment = do
+        probe <- liftIO (doesFileExist fragment)
+        case probe of
+            True  -> return True
+            False -> do
+                write ("warning: Fragment \"" <> intoRope fragment <> "\" not found, skipping")
+                return False
 
 {-
 Which kind of file is it? Dispatch to the appropriate reader switching on
