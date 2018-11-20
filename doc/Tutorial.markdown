@@ -111,5 +111,5 @@ invoke _latexmk_ command to build your resultant PDF.
 
 See also:
 
- - [Further examples](doc/Examples.markdown)
- - [Background](README.markdown)
+ - [Further examples](Examples.markdown)
+ - [Background](Background.markdown)

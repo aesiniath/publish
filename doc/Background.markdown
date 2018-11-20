@@ -81,5 +81,5 @@ document using the `\inclugegraphics` command.
 
 Further reading:
 
- - [Getting Started](doc/Tutorial.markdown)
- - [Examples](doc/Examples.markdown)
+ - [Getting Started](Tutorial.markdown)
+ - [Examples](Examples.markdown)

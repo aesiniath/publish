@@ -37,40 +37,17 @@ and that is what **publish** provides. It gives you a way to:
  4. combine the resultant intermediate pieces and render them to a _.pdf_
     using the **xetex** toolchain.
 
-Usage
------
-
-Putting:
-
-```
-chapters/Introduction.markdown
-chapters/RelatedWork.markdown
-chapters/Results.latex
-chapters/chart-07.svg
-chapters/Analysis.markdown
-chapters/Conclusion.markdown
-generated/References.latex
-```
-
-into _Example.book_, you can render this content to a PDF with:
-
-```
-$ render --default-preamble --verbose Example.book
-```
-
-the result will be in _Example.pdf_.
-
 Documentation
 -------------
 
-There is a getting started tutorial, background notes, and several
-examples. And you can get help from the command-line:
+There is a [getting started][Tutorial] tutorial, [background][Background]
+notes, and several [examples](Examples). And you can get help from the
+command-line:
 
 ```
 $ render --help
 ```
 
-See
-
- - [Getting Started](doc/Tutorial.markdown)
- - [Background](doc/Background.markdown)
+[Tutorial]: doc/Tutorial.markdown
+[Background]: doc/Background.markdown
+[Examples]: doc/Examples.markdown
