@@ -119,12 +119,14 @@ setupTargetFile book = do
     let master = tmpdir ++ "/" ++ base ++ ".tex"
         result = tmpdir ++ "/" ++ base ++ ".pdf"
 
+    ensureDirectory (tmpdir ++ "/" ++ base ++ "/")
+
     params <- getCommandLine
     first <- case lookupOptionFlag "default-preamble" params of
         Nothing     -> return []
         Just True   -> do
             let name = "00_Beginning.latex"
-            let target = tmpdir ++ "/" ++ name
+            let target = tmpdir ++ "/" ++ base ++ "/" ++ name
             liftIO $ withFile target WriteMode $ \handle -> do
                 hWrite handle preamble
             return [name]
@@ -132,7 +134,8 @@ setupTargetFile book = do
 
     env <- getApplicationState
     let env' = env
-            { intermediateFilenamesFrom = first
+            { basenameFrom = base
+            , intermediateFilenamesFrom = first
             , masterFilenameFrom = master
             , resultFilenameFrom = result
             , tempDirectoryFrom = tmpdir
@@ -212,8 +215,9 @@ convertMarkdown file =
   in do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
+        base = basenameFrom env
         file' = replaceExtension file ".latex"
-        target = tmpdir ++ "/" ++ file'
+        target = tmpdir ++ "/" ++ base ++ "/" ++ file'
         files = intermediateFilenamesFrom env
 
     ensureDirectory target
@@ -241,7 +245,8 @@ passthroughLaTeX :: FilePath -> Program Env ()
 passthroughLaTeX file = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
-        target = tmpdir ++ "/" ++ file
+        base = basenameFrom env
+        target = tmpdir ++ "/" ++ base ++ "/" ++ file
         files = intermediateFilenamesFrom env
 
     ensureDirectory target
@@ -262,7 +267,8 @@ convertImage :: FilePath -> Program Env ()
 convertImage file = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
-        target = tmpdir ++ "/" ++ replaceExtension file ".pdf"
+        base = basenameFrom env
+        target = tmpdir ++ "/" ++ base ++ "/" ++ replaceExtension file ".pdf"
 
         rsvgConvert =
             [ "rsvg-convert"
@@ -289,7 +295,8 @@ passthroughImage :: FilePath -> Program Env ()
 passthroughImage file = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
-        target = tmpdir ++ "/" ++ file
+        base = basenameFrom env
+        target = tmpdir ++ "/" ++ base ++ "/" ++ file
 
     ensureDirectory target
     ifNewer file target $ do
@@ -305,6 +312,7 @@ produceResult = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
         master = masterFilenameFrom env
+        base = basenameFrom env
         files = intermediateFilenamesFrom env
 
     params <- getCommandLine
@@ -312,7 +320,7 @@ produceResult = do
         Nothing     -> return files
         Just True   -> do
             let name = "ZZ_Ending.latex"
-            let target = tmpdir ++ "/" ++ name
+            let target = tmpdir ++ "/" ++ base ++ "/" ++ name
             liftIO $ withFile target WriteMode $ \handle -> do
                 hWrite handle ending
             return (name:files)
@@ -322,7 +330,8 @@ produceResult = do
     liftIO $ withFile master WriteMode $ \handle -> do
         hPutStrLn handle ("\\RequirePackage{import}")
         forM_ (reverse files') $ \file -> do
-            let (path,name) = splitFileName file
+            let file' = base ++ "/" ++ file
+            let (path,name) = splitFileName file'
             hPutStrLn handle ("\\subimport{" ++ path ++ "}{" ++ name ++ "}")
 
 getUserID :: Program a String

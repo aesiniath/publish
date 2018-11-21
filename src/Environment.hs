@@ -9,6 +9,7 @@ import System.Posix.Directory (getWorkingDirectory)
 
 data Env = Env
     { startingDirectoryFrom :: FilePath
+    , basenameFrom :: String
     , intermediateFilenamesFrom :: [FilePath]
     , masterFilenameFrom :: FilePath
     , resultFilenameFrom :: FilePath
@@ -18,5 +19,5 @@ data Env = Env
 initial :: IO Env
 initial = do
     cwd <- getWorkingDirectory
-    return (Env cwd [] "/dev/null" "/dev/null" "/dev/null")
+    return (Env cwd "None" [] "/dev/null" "/dev/null" "/dev/null")
 
