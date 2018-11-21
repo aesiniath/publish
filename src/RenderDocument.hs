@@ -87,8 +87,15 @@ extractBookFile params =
         Just file -> splitFileName file
   in do
     debugS "relative" relative
-    liftIO (changeWorkingDirectory relative)
-    return bookfile
+    debugS "bookfile" bookfile
+    probe <- liftIO $ do
+        changeWorkingDirectory relative
+        doesFileExist bookfile
+    case probe of
+        True  -> return bookfile
+        False -> do
+            write ("error: specified .book file \"" <> intoRope bookfile <> "\" not found.")
+            throw (userError "no such file")
 
 
 setupTargetFile :: FilePath -> Program Env ()
@@ -144,9 +151,10 @@ setupTargetFile book = do
 
 processBookFile :: FilePath -> Program Env [FilePath]
 processBookFile file = do
-    debugS "bookfile" file
     contents <- liftIO (T.readFile file)
-    filterM skipNotFound (possibilities contents)
+    list <- filterM skipNotFound (possibilities contents)
+    debugS "fragments" (length list)
+    return list
   where
     -- filter out blank lines and lines commented out
     possibilities :: Text -> [FilePath]
