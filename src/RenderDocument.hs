@@ -100,6 +100,10 @@ extractBookFile params =
 
 setupTargetFile :: FilePath -> Program Env ()
 setupTargetFile book = do
+    env <- getApplicationState
+    let start = startingDirectoryFrom env
+    let dotfile = start ++ "/.target"
+
     tmpdir <- liftIO $ catch
         (do
             dir' <- readFile dotfile
@@ -132,7 +136,6 @@ setupTargetFile book = do
             return [name]
         Just _      -> invalid
 
-    env <- getApplicationState
     let env' = env
             { basenameFrom = base
             , intermediateFilenamesFrom = first
@@ -142,8 +145,6 @@ setupTargetFile book = do
             }
     setApplicationState env'
   where
-    dotfile = ".target"
-
     base = takeBaseName book -- "/directory/file.ext" -> "file"
 
     boom = userError "Temp dir no longer present"
