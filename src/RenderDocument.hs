@@ -116,7 +116,7 @@ setupTargetFile book = do
     first <- case lookupOptionFlag "default-preamble" params of
         Nothing     -> return []
         Just True   -> do
-            let name = "00_Beginning.tex"
+            let name = "00_Beginning.latex"
             let target = tmpdir ++ "/" ++ name
             liftIO $ withFile target WriteMode $ \handle -> do
                 hWrite handle preamble
@@ -204,7 +204,7 @@ convertMarkdown file =
   in do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
-        file' = replaceExtension file ".tex"
+        file' = replaceExtension file ".latex"
         target = tmpdir ++ "/" ++ file'
         files = intermediateFilenamesFrom env
 
@@ -233,8 +233,7 @@ passthroughLaTeX :: FilePath -> Program Env ()
 passthroughLaTeX file = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
-        file' = replaceExtension file ".tex"
-        target = tmpdir ++ "/" ++ file'
+        target = tmpdir ++ "/" ++ file
         files = intermediateFilenamesFrom env
 
     ensureDirectory target
@@ -243,7 +242,7 @@ passthroughLaTeX file = do
         liftIO $ do
             copyFileWithMetadata file target
 
-    let env' = env { intermediateFilenamesFrom = file':files }
+    let env' = env { intermediateFilenamesFrom = file:files }
     setApplicationState env'
 
 {-
@@ -304,7 +303,7 @@ produceResult = do
     files' <- case lookupOptionFlag "default-preamble" params of
         Nothing     -> return files
         Just True   -> do
-            let name = "ZZ_Ending.tex"
+            let name = "ZZ_Ending.latex"
             let target = tmpdir ++ "/" ++ name
             liftIO $ withFile target WriteMode $ \handle -> do
                 hWrite handle ending
