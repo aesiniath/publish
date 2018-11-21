@@ -5,13 +5,18 @@ module Environment
 )
 where
 
+import System.Posix.Directory (getWorkingDirectory)
+
 data Env = Env
-    { intermediateFilenamesFrom :: [FilePath]
+    { startingDirectoryFrom :: FilePath
+    , intermediateFilenamesFrom :: [FilePath]
     , masterFilenameFrom :: FilePath
     , resultFilenameFrom :: FilePath
     , tempDirectoryFrom :: FilePath
     }
 
-initial :: Env
-initial = Env [] "" "" ""
+initial :: IO Env
+initial = do
+    cwd <- getWorkingDirectory
+    return (Env cwd [] "/dev/null" "/dev/null" "/dev/null")
 

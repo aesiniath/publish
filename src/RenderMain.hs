@@ -13,7 +13,8 @@ import Environment (initial)
 
 main :: IO ()
 main = do
-    context <- configure (fromPackage version) initial (simple
+    env <- initial
+    context <- configure (fromPackage version) env (simple
         [ Option "default-preamble" (Just 'p') Empty [quote|
             Wrap a built-in default LaTeX preamble (and ending) around your
             supplied source fragments. Most documents will put their own
