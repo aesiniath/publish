@@ -19,9 +19,10 @@ import System.Directory (doesFileExist, doesDirectoryExist
     , getModificationTime, copyFileWithMetadata)
 import System.Exit (ExitCode(..))
 import System.FilePath.Posix (takeBaseName, takeFileName, takeExtension
-    , replaceExtension, splitFileName)
+    , replaceExtension, splitFileName, replaceDirectory)
 import System.IO (withFile, IOMode(WriteMode), hPutStrLn)
 import System.IO.Error (userError, IOError)
+import System.Posix.Directory (changeWorkingDirectory)
 import System.Posix.Temp (mkdtemp)
 import System.Posix.User (getEffectiveUserID, getEffectiveGroupID)
 import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
@@ -37,21 +38,23 @@ import Utilities (ensureDirectory, execProcess, ifNewer)
 program :: Program Env ()
 program = do
     params <- getCommandLine
+
+    event "Identify .book file"
+    bookfile <- extractBookFile params
+
     case lookupOptionFlag "watch" params of
         Nothing -> do
             -- normal operation, single pass
-            void (renderDocument)
+            void (renderDocument bookfile)
         Just False -> invalid
         Just True  -> do
             -- use inotify to rebuild on changes
-            forever (renderDocument >>= waitForChange)
+            forever (renderDocument bookfile >>= waitForChange)
 
 
-renderDocument :: Program Env [FilePath]
-renderDocument = do
-    bookfile <- extractBookFile
-
-    event "Reading bookfile"
+renderDocument :: FilePath -> Program Env [FilePath]
+renderDocument bookfile = do
+    event "Read .book file"
     files <- processBookFile bookfile
 
     event "Setup temporary directory"
@@ -71,12 +74,22 @@ renderDocument = do
     return (bookfile:files)
 
 
-extractBookFile :: Program Env FilePath
-extractBookFile = do
-    params <- getCommandLine
-    case lookupArgument "bookfile" params of
-        Nothing -> invalid
-        Just bookfile -> return bookfile
+{-
+For the situation where the .book file is in a location other than '.'
+then chdir there first, so any relative paths within _it_ are handled
+properly, as are inotify watches later if they are employed.
+-}
+extractBookFile :: Parameters -> Program Env FilePath
+extractBookFile params =
+  let
+    (relative,bookfile) = case lookupArgument "bookfile" params of
+        Nothing -> error "invalid"
+        Just file -> splitFileName file
+  in do
+    debugS "relative" relative
+    liftIO (changeWorkingDirectory relative)
+    return bookfile
+
 
 setupTargetFile :: FilePath -> Program Env ()
 setupTargetFile book = do
@@ -103,20 +116,21 @@ setupTargetFile book = do
     first <- case lookupOptionFlag "default-preamble" params of
         Nothing     -> return []
         Just True   -> do
-            let name = "00_Beginning.tex"
+            let name = "00_Beginning.latex"
             let target = tmpdir ++ "/" ++ name
             liftIO $ withFile target WriteMode $ \handle -> do
                 hWrite handle preamble
             return [name]
         Just _      -> invalid
 
-    let env = Env
+    env <- getApplicationState
+    let env' = env
             { intermediateFilenamesFrom = first
             , masterFilenameFrom = master
             , resultFilenameFrom = result
             , tempDirectoryFrom = tmpdir
             }
-    setApplicationState env
+    setApplicationState env'
   where
     dotfile = ".target"
 
@@ -190,7 +204,7 @@ convertMarkdown file =
   in do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
-        file' = replaceExtension file ".tex"
+        file' = replaceExtension file ".latex"
         target = tmpdir ++ "/" ++ file'
         files = intermediateFilenamesFrom env
 
@@ -219,8 +233,7 @@ passthroughLaTeX :: FilePath -> Program Env ()
 passthroughLaTeX file = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
-        file' = replaceExtension file ".tex"
-        target = tmpdir ++ "/" ++ file'
+        target = tmpdir ++ "/" ++ file
         files = intermediateFilenamesFrom env
 
     ensureDirectory target
@@ -229,7 +242,7 @@ passthroughLaTeX file = do
         liftIO $ do
             copyFileWithMetadata file target
 
-    let env' = env { intermediateFilenamesFrom = file':files }
+    let env' = env { intermediateFilenamesFrom = file:files }
     setApplicationState env'
 
 {-
@@ -290,7 +303,7 @@ produceResult = do
     files' <- case lookupOptionFlag "default-preamble" params of
         Nothing     -> return files
         Just True   -> do
-            let name = "ZZ_Ending.tex"
+            let name = "ZZ_Ending.latex"
             let target = tmpdir ++ "/" ++ name
             liftIO $ withFile target WriteMode $ \handle -> do
                 hWrite handle ending
@@ -359,10 +372,11 @@ copyHere :: Program Env ()
 copyHere = do
     env <- getApplicationState
     let result = resultFilenameFrom env
-        final = takeFileName result             -- ie ./Book.pdf
+        start = startingDirectoryFrom env
+        final = replaceDirectory result start       -- ie ./Book.pdf
 
     ifNewer result final $ do
-        event "Copy resultant document here"
+        event "Copy resultant document to destination"
         debugS "result" result
         debugS "final" final
         liftIO $ do
