@@ -362,6 +362,7 @@ renderPDF = do
                 , "-interaction=nonstopmode"
                 , "-halt-on-error"
                 , "-file-line-error"
+                , "-cd"
                 , master
                 ]
 
