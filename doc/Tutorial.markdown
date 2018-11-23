@@ -75,7 +75,7 @@ Preamble
 --------
 
 The `-p` in the above example was important. It's short for
-`--default-preamble`. Using that option tells the _render_ program to wrap
+`--builtin-preamble`. Using that option tells the _render_ program to wrap
 a simple built-in LaTeX preamble around your document. 
 
 More advanced users will happily use their own LaTeX preamble based on
@@ -92,13 +92,13 @@ ending.latex
 Docker integration
 ------------------
 
-Assuming you _don't_ have years of experience using LaTeX toolchains, you
-can use the default preamble. If you want to install the packages yourself
-you can freely do so. There is also an option to run the render in a
+Assuming you _don't_ have years of experience using LaTeX toolchains, you can
+use a presupplied built-in preamble. If you want to install the packages
+yourself you can freely do so. There is also an option to run the render in a
 Docker container.
 
 ```shell
-$ render --default-preamble --docker=oprdyn/publish-default:latest Trees.book
+$ render --builtin-preamble --docker=oprdyn/publish-builtin:latest Trees.book
 $
 ```
 
