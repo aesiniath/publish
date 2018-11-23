@@ -124,7 +124,7 @@ setupTargetFile book = do
         result = tmpdir ++ "/" ++ base ++ ".pdf"
 
     params <- getCommandLine
-    first <- case lookupOptionFlag "default-preamble" params of
+    first <- case lookupOptionFlag "builtin-preamble" params of
         Nothing     -> return []
         Just True   -> do
             let name = "00_Beginning.latex"
@@ -309,7 +309,7 @@ produceResult = do
         files = intermediateFilenamesFrom env
 
     params <- getCommandLine
-    files' <- case lookupOptionFlag "default-preamble" params of
+    files' <- case lookupOptionFlag "builtin-preamble" params of
         Nothing     -> return files
         Just True   -> do
             let name = "ZZ_Ending.latex"
