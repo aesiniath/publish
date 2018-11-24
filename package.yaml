@@ -38,3 +38,11 @@ executables:
      - OutputParser
      - Paths_publish
      - Utilities
+
+executables:
+  format:
+    source-dirs: src
+    main: WrapMain.hs
+    other-modules:
+     - WrapDocument
+     - Paths_publish
