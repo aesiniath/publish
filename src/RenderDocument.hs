@@ -33,7 +33,7 @@ import Environment (Env(..))
 import NotifyChanges (waitForChange)
 import LatexPreamble (preamble, ending)
 import OutputParser (parseOutputForError)
-import Utilities (ensureDirectory, execProcess, ifNewer)
+import Utilities (ensureDirectory, execProcess, ifNewer, isNewer)
 
 program :: Program Env ()
 program = do
@@ -385,9 +385,13 @@ copyHere = do
         start = startingDirectoryFrom env
         final = replaceDirectory result start       -- ie ./Book.pdf
 
-    ifNewer result final $ do
-        event "Copy resultant document to destination"
-        debugS "result" result
-        debugS "final" final
-        liftIO $ do
-            copyFileWithMetadata result final
+    changed <- isNewer result final
+    case changed of
+        True -> do
+            event "Copy resultant PDF to starting directory"
+            debugS "result" result
+            debugS "final" final
+            liftIO $ do
+                copyFileWithMetadata result final
+        False -> do
+            event "Result unchanged"

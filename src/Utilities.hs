@@ -6,6 +6,7 @@ module Utilities
     ( ensureDirectory
     , execProcess
     , ifNewer
+    , isNewer
     )
 where
 
@@ -76,10 +77,14 @@ TODO this could potentially move to the **unbeliever** library
 -}
 ifNewer :: FilePath -> FilePath -> Program t () -> Program t ()
 ifNewer source target program = do
-    withContext $ \runProgram -> do
-        time1 <- getModificationTime source
-        time2 <- doesFileExist target >>= \case
-            True  -> getModificationTime target
-            False -> return (convertToUTC 0)        -- the epoch
-        when (time1 > time2) $ do
-            runProgram program
+    changed <- isNewer source target
+    when changed $ do
+        program
+
+isNewer :: FilePath -> FilePath -> Program t Bool
+isNewer source target = liftIO $ do
+    time1 <- getModificationTime source
+    time2 <- doesFileExist target >>= \case
+        True  -> getModificationTime target
+        False -> return (convertToUTC 0)        -- the epoch
+    return (time1 > time2)
