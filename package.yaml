@@ -39,10 +39,8 @@ executables:
      - Paths_publish
      - Utilities
 
-executables:
   format:
     source-dirs: src
-    main: WrapMain.hs
+    main: FormatMain.hs
     other-modules:
-     - WrapDocument
-     - Paths_publish
+     - FormatDocument

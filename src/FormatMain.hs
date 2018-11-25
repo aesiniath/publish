@@ -7,7 +7,6 @@ import Core.Program
 import Core.Text
 
 import FormatDocument (program)
-import Paths_publish (version)
 
 
 main :: IO ()

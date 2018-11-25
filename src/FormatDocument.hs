@@ -21,15 +21,17 @@ import Text.Pandoc (runIOorExplode, readMarkdown, writeMarkdown, def
     , readerExtensions, pandocExtensions, writerTopLevelDivision
     , TopLevelDivision(TopLevelChapter))
 
-program :: Program Env ()
+program :: Program None ()
 program = do
     params <- getCommandLine
 
     event "Identify document fragment"
 
-    file = case lookupArgument "document" params of
-        Nothing -> error "invalid"
-        Just file -> file
+    let file = case lookupArgument "document" params of
+            Nothing -> error "invalid"
+            Just file -> file
+
+    return ()
 
 
 
