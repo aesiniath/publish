@@ -18,6 +18,7 @@ dependencies:
  - hinotify
  - pandoc-types
  - pandoc
+ - template-haskell
  - text
  - typed-process
  - unbeliever >= 0.6

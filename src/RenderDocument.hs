@@ -375,7 +375,7 @@ renderPDF = do
             debug "stderr" (intoRope err)
             debug "stdout" (intoRope out)
             write (parseOutputForError tmpdir out)
-            throw exit
+--          throw exit
         ExitSuccess -> return ()
 
 copyHere :: Program Env ()
