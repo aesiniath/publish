@@ -8,31 +8,57 @@ where
 
 import Core.Program
 import Core.System
-import Core.Text
-import Data.Text (Text)
-import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import System.Directory (doesFileExist)
-import System.Exit (ExitCode(..))
-import System.IO (withFile, IOMode(WriteMode), hPutStrLn)
-import System.IO.Error (userError, IOError)
-import System.Posix.Temp (mkdtemp)
 import Text.Pandoc (runIOorExplode, readMarkdown, writeMarkdown, def
-    , readerExtensions, pandocExtensions, writerTopLevelDivision
-    , TopLevelDivision(TopLevelChapter))
+    , readerExtensions, pandocExtensions, writerExtensions, writerColumns
+    , writerSetextHeaders, writerWrapText, WrapOption(WrapAuto), Pandoc)
 
 program :: Program None ()
 program = do
-    params <- getCommandLine
-
     event "Identify document fragment"
+    file <- getFragmentName
 
-    let file = case lookupArgument "document" params of
+    event "Load to Pandoc internal representation"
+    parsed <- loadFragment file
+
+    event "Write to Markdown format"
+    writeResult file parsed
+
+    event "Complete"
+
+getFragmentName :: Program None FilePath
+getFragmentName = do
+    params <- getCommandLine
+    let fragment = case lookupArgument "document" params of
             Nothing -> error "invalid"
             Just file -> file
+    return fragment
 
-    return ()
+loadFragment :: FilePath -> Program None Pandoc
+loadFragment file =
+  let
+    readingOptions = def
+        { readerExtensions = pandocExtensions
+        }
+  in
+    liftIO $ do
+        contents <- T.readFile file
+        runIOorExplode $ do
+            readMarkdown readingOptions contents
 
-
-
+writeResult :: FilePath -> Pandoc -> Program None ()
+writeResult file doc =
+  let
+    result = file ++ "-tmp"
+    writingOptions = def
+        { writerExtensions = pandocExtensions
+        , writerWrapText = WrapAuto
+        , writerColumns = 75
+        , writerSetextHeaders = True
+        }
+  in
+    liftIO $ do
+        contents' <- runIOorExplode $ do
+            writeMarkdown writingOptions doc
+        T.writeFile result contents'
 
