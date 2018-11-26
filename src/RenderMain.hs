@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 module Main where
@@ -7,14 +8,15 @@ import Core.Program
 import Core.Text
 
 import RenderDocument (program)
-import Paths_publish (version)
 import Environment (initial)
 
+version :: Version
+version = $(fromPackage)
 
 main :: IO ()
 main = do
     env <- initial
-    context <- configure (fromPackage version) env (simple
+    context <- configure version env (simple
         [ Option "builtin-preamble" (Just 'p') Empty [quote|
             Wrap a built-in LaTeX preamble (and ending) around your
             supplied source fragments. Most documents will put their own

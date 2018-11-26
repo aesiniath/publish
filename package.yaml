@@ -18,9 +18,10 @@ dependencies:
  - hinotify
  - pandoc-types
  - pandoc
+ - template-haskell
  - text
  - typed-process
- - unbeliever >= 0.6
+ - unbeliever >= 0.7
  - unix
  - unordered-containers
 
