@@ -54,7 +54,7 @@ particularly earthshattering conceptual leap to consider calling into the
 library directly from a wrapper program ourselves, especially as we were no
 longer relying on it to build the PDF for us.
 
-**publish**, then, is a tool which allows you to specify the files
+**publish**, then, is a tool suite which allows you to specify the files
 comprising a manuscript, converts them from Markdown to LaTeX, then
 combines them together as input to the LaTeX processor for conversion to
 Portable Document Format ready for previewing or printing.
@@ -72,12 +72,13 @@ This is a surprise to many users as SVG support has been dominant on the
 web for some years and the target format, PDF, is itself a high-quality
 vector format.
 
-The solution, or at least work-around, is render (convert) the SVGs to a
-PDFs first and then include these fragments in the typeset document. While
-we tend to think of PDFs as "pages" it is at its essence just a way of
-describing vector graphics, and (again not something you would have thought
-of) you can include PDF fragments in \[what will become\] another PDF
-document using the `\inclugegraphics` command.
+The solution, or at least work-around, is render (convert) each of the SVGs
+to a PDF first using **librsvg**'s _rsvg-convert_ and then include these
+fragments in the typeset document.  While we tend to think of PDFs as
+"pages" it is at its essence just a way of describing vector graphics, and
+(again not something you would have thought of) you can include PDF
+fragments in \[what will become\] another PDF document using the
+`\inclugegraphics` command.
 
 Further reading:
 

@@ -4,7 +4,7 @@ Publishing tools for papers, books, and presentations
 Authoring a high quality document and rendering it to a PDF suitable for
 printing means using a toolchain different than those used to assemble
 content into web pages. LaTeX processors are the dominant way to typeset
-documents, but while the results can be beautiful it is an environment
+documents, but while the results are often beautiful it is an environment
 which has accreted cruft over decades and can be difficult to use. We have
 faith that the gods in the computing pantheon will someday grant us peace
 (e.g. the end of the editor wars) and better tools (or at least ones that
@@ -31,8 +31,8 @@ and that is what **publish** provides. It gives you a way to:
 
  2. convert Markdown fragments into LaTeX using **pandoc**;
 
- 3. convert _.svg_ images into something that can be included by the LaTeX
-    processors; and
+ 3. use **librsvg** to convert _.svg_ images into something that can be
+    included by the LaTeX processors; and
 
  4. combine the resultant intermediate pieces and render them to a _.pdf_
     using the **xetex** toolchain.
