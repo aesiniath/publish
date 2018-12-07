@@ -79,7 +79,6 @@ renderDocument mode bookfile = do
             Cycle -> return ()
         )
 
-    event "Complete"
     return (bookfile:files)
 
 
@@ -412,5 +411,6 @@ copyHere = do
             debugS "final" final
             liftIO $ do
                 copyFileWithMetadata result final
+            event "Complete"
         False -> do
             event "Result unchanged"
