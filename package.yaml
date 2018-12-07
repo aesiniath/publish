@@ -1,5 +1,5 @@
 name: publish
-version:  0.3.1
+version:  0.3.2
 synopsis: Publishing tools for papers, books, and presentations
 license: BSD3
 license-file: LICENCE
@@ -21,7 +21,7 @@ dependencies:
  - template-haskell
  - text
  - typed-process
- - unbeliever >= 0.7
+ - unbeliever >= 0.7.2
  - unix
  - unordered-containers
 

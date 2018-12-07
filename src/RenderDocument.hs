@@ -35,25 +35,27 @@ import LatexPreamble (preamble, ending)
 import OutputParser (parseOutputForError)
 import Utilities (ensureDirectory, execProcess, ifNewer, isNewer)
 
+data Mode = Once | Cycle
+
 program :: Program Env ()
 program = do
     params <- getCommandLine
+    mode <- extractMode params
 
     event "Identify .book file"
     bookfile <- extractBookFile params
 
-    case lookupOptionFlag "watch" params of
-        Nothing -> do
+    case mode of
+        Once -> do
             -- normal operation, single pass
-            void (renderDocument bookfile)
-        Just False -> invalid
-        Just True  -> do
+            void (renderDocument mode bookfile)
+        Cycle -> do
             -- use inotify to rebuild on changes
-            forever (renderDocument bookfile >>= waitForChange)
+            forever (renderDocument mode bookfile >>= waitForChange)
 
 
-renderDocument :: FilePath -> Program Env [FilePath]
-renderDocument bookfile = do
+renderDocument :: Mode -> FilePath -> Program Env [FilePath]
+renderDocument mode bookfile = do
     event "Read .book file"
     files <- processBookFile bookfile
 
@@ -67,12 +69,28 @@ renderDocument bookfile = do
     produceResult
 
     event "Render document to PDF"
-    renderPDF
-    copyHere
+    catch
+        (do
+            renderPDF
+            copyHere
+        )
+        (\(e :: ExitCode) -> case mode of
+            Once -> throw e
+            Cycle -> return ()
+        )
 
-    event "Complete"
     return (bookfile:files)
 
+
+extractMode :: Parameters -> Program Env Mode
+extractMode params =
+  let
+    mode = case lookupOptionFlag "watch" params of
+        Just False  -> error "Invalid State"
+        Just True   -> Cycle
+        Nothing     -> Once
+  in
+    return mode
 
 {-
 For the situation where the .book file is in a location other than '.'
@@ -370,12 +388,12 @@ renderPDF = do
 
     (exit,out,err) <- execProcess latexmk
     case exit of
-        ExitFailure _ ->  do
+        ExitFailure _ -> do
             event "Render failed"
             debug "stderr" (intoRope err)
             debug "stdout" (intoRope out)
             write (parseOutputForError tmpdir out)
---          throw exit
+            throw exit
         ExitSuccess -> return ()
 
 copyHere :: Program Env ()
@@ -393,5 +411,6 @@ copyHere = do
             debugS "final" final
             liftIO $ do
                 copyFileWithMetadata result final
+            event "Complete"
         False -> do
             event "Result unchanged"
