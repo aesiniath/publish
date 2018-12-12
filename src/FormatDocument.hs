@@ -3,6 +3,7 @@
 
 module FormatDocument
     ( program
+    , loadFragment
     )
 where
 

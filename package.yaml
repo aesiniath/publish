@@ -45,3 +45,16 @@ executables:
     main: FormatMain.hs
     other-modules:
      - FormatDocument
+
+tests:
+  experiment:
+    dependencies:
+     - unbeliever
+    source-dirs:
+     - tests
+     - src
+    main: ReformatTest.hs
+    other-modules:
+     - FormatDocument
+     - PandocToMarkdown
+
