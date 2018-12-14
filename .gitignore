@@ -5,6 +5,8 @@
 
 # symlinks to executables
 /render
+/format
+/experiment
 
 # runtime debris
 /.target
