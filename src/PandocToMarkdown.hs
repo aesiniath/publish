@@ -21,12 +21,25 @@ blocksToMarkdown blocks =
 convertBlock :: Block -> Rope
 convertBlock block =
   let
-    msg = "Unfinished block conversion: " ++ show block
-  in case block of
-    Plain inlines -> inlinesToMarkdown inlines
-    Para  inlines -> inlinesToMarkdown inlines
-    Null -> mempty
-    _ -> error msg
+    msg = "Unfinished block: " ++ show block
+    result = case block of
+        Plain inlines -> inlinesToMarkdown inlines
+        Para  inlines -> inlinesToMarkdown inlines
+        Header level _ inlines -> headingToMarkdown level inlines
+        Null -> mempty
+        _ -> error msg
+  in
+    result <> "\n\n"
+
+headingToMarkdown :: Int -> [Inline] -> Rope
+headingToMarkdown level inlines =
+  let
+    text = inlinesToMarkdown inlines
+  in
+    case level of
+        1 -> text <> "\n" <> underline '=' text
+        2 -> text <> "\n" <> underline '-' text
+        n -> intoRope (replicate n '#') <> " " <> text
 
 inlinesToMarkdown :: [Inline] -> Rope
 inlinesToMarkdown inlines =
@@ -35,13 +48,22 @@ inlinesToMarkdown inlines =
 convertInline :: Inline -> Rope
 convertInline inline =
   let
-    msg = "Unfinished inline conversion: " ++ show inline
+    msg = "Unfinished inline: " ++ show inline
   in case inline of
     Space -> " "
     Str string -> intoRope string
     Emph inlines -> "_" <> inlinesToMarkdown inlines <> "_"
     Strong inlines -> "**" <> inlinesToMarkdown inlines <> "**"
+    SoftBreak -> mempty
+    Image _ inlines (url, _) -> imageToMarkdown inlines url
     _ -> error msg
 
+imageToMarkdown :: [Inline] -> String -> Rope
+imageToMarkdown inlines url =
+  let
+    text = inlinesToMarkdown inlines
+    target = intoRope url
+  in
+    "![" <> text <> "](" <> target <> ")"
     
 
