@@ -24,7 +24,7 @@ convertBlock block =
     msg = "Unfinished block: " ++ show block
     result = case block of
         Plain inlines -> inlinesToMarkdown inlines
-        Para  inlines -> inlinesToMarkdown inlines
+        Para  inlines -> wrap 75 (inlinesToMarkdown inlines)
         Header level _ inlines -> headingToMarkdown level inlines
         Null -> mempty
         _ -> error msg
@@ -54,7 +54,7 @@ convertInline inline =
     Str string -> intoRope string
     Emph inlines -> "_" <> inlinesToMarkdown inlines <> "_"
     Strong inlines -> "**" <> inlinesToMarkdown inlines <> "**"
-    SoftBreak -> mempty
+    SoftBreak -> " "
     Image _ inlines (url, _) -> imageToMarkdown inlines url
     _ -> error msg
 
