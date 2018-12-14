@@ -9,10 +9,15 @@ where
 
 import Core.Program
 import Core.System
+import Core.Text
+
 import qualified Data.Text.IO as T
+import System.IO (withFile, IOMode(..))
 import Text.Pandoc (runIOorExplode, readMarkdown, writeMarkdown, def
     , readerExtensions, pandocExtensions, writerExtensions, writerColumns
     , writerSetextHeaders, writerWrapText, WrapOption(WrapAuto), Pandoc)
+
+import PandocToMarkdown
 
 program :: Program None ()
 program = do
@@ -51,15 +56,9 @@ writeResult :: FilePath -> Pandoc -> Program None ()
 writeResult file doc =
   let
     result = file ++ "-tmp"
-    writingOptions = def
-        { writerExtensions = pandocExtensions
-        , writerWrapText = WrapAuto
-        , writerColumns = 75
-        , writerSetextHeaders = True
-        }
+    contents' = pandocToMarkdown doc
   in
     liftIO $ do
-        contents' <- runIOorExplode $ do
-            writeMarkdown writingOptions doc
-        T.writeFile result contents'
+        withFile result WriteMode $ \handle ->
+            hWrite handle contents'
 
