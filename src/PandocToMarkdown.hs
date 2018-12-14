@@ -27,6 +27,7 @@ convertBlock block =
         Para  inlines -> wrap 75 (inlinesToMarkdown inlines)
         Header level _ inlines -> headingToMarkdown level inlines
         Null -> mempty
+        RawBlock _ string -> intoRope string
         _ -> error msg
   in
     result <> "\n\n"
