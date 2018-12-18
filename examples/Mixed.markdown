@@ -17,6 +17,11 @@ Italics in that sentance should remain underscores.
 
 Whitespace here should be preserved.
 
+```haskell
+mail :: IO ()
+main = print "Hello"
+```
+
 ### Third level heading
 
 An image tag should be unchanged, but this being a long paragraph with long lines

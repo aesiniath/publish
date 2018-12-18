@@ -4,6 +4,7 @@
 module FormatDocument
     ( program
     , loadFragment
+    , markdownToPandoc
     )
 where
 
@@ -11,6 +12,7 @@ import Core.Program
 import Core.System
 import Core.Text
 
+import qualified Data.Text as T (Text)
 import qualified Data.Text.IO as T
 import System.IO (withFile, IOMode(..))
 import Text.Pandoc (runIOorExplode, readMarkdown, writeMarkdown, def
@@ -42,15 +44,20 @@ getFragmentName = do
 
 loadFragment :: FilePath -> Program None Pandoc
 loadFragment file =
+    liftIO $ do
+        contents <- T.readFile file
+        markdownToPandoc contents
+
+-- so we can use in test suite
+markdownToPandoc :: T.Text -> IO Pandoc
+markdownToPandoc contents =
   let
     readingOptions = def
         { readerExtensions = pandocExtensions
         }
-  in
-    liftIO $ do
-        contents <- T.readFile file
-        runIOorExplode $ do
-            readMarkdown readingOptions contents
+  in do
+    runIOorExplode $ do
+        readMarkdown readingOptions contents
 
 writeResult :: FilePath -> Pandoc -> Program None ()
 writeResult file doc =
