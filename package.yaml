@@ -58,3 +58,15 @@ tests:
      - FormatDocument
      - PandocToMarkdown
 
+  check:
+    dependencies:
+     - hspec
+    ghc-options: -threaded
+    source-dirs:
+     - src
+     - tests
+    main: TestSuite.hs
+    other-modules:
+     - CompareFragments
+
+
