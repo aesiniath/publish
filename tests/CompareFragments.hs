@@ -15,6 +15,7 @@ import PandocToMarkdown (pandocToMarkdown)
 fragments :: [(String,FilePath)]
 fragments =
     [ ("headings",      "tests/fragments/Headings.markdown")
+    , ("paragraphs",    "tests/fragments/Paragraphs.markdown")
     ]
 
 checkByComparingFragments :: Spec

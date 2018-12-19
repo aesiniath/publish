@@ -16,8 +16,8 @@ import qualified Data.Text as T (Text)
 import qualified Data.Text.IO as T
 import System.IO (withFile, IOMode(..))
 import Text.Pandoc (runIOorExplode, readMarkdown, writeMarkdown, def
-    , readerExtensions, pandocExtensions, writerExtensions, writerColumns
-    , writerSetextHeaders, writerWrapText, WrapOption(WrapAuto), Pandoc)
+    , readerExtensions, pandocExtensions, disableExtension, Extension(..)
+    , Pandoc)
 
 import PandocToMarkdown
 
@@ -48,12 +48,16 @@ loadFragment file =
         contents <- T.readFile file
         markdownToPandoc contents
 
--- so we can use in test suite
+--
+-- Unlike the render use case, here we suppress certain
+-- options which mess up the ASCII form of the source documents
+--
 markdownToPandoc :: T.Text -> IO Pandoc
 markdownToPandoc contents =
   let
+    extensions = disableExtension Ext_smart pandocExtensions
     readingOptions = def
-        { readerExtensions = pandocExtensions
+        { readerExtensions = extensions
         }
   in do
     runIOorExplode $ do
