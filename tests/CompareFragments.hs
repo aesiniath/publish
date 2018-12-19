@@ -16,6 +16,7 @@ fragments :: [(String,FilePath)]
 fragments =
     [ ("headings",      "tests/fragments/Headings.markdown")
     , ("paragraphs",    "tests/fragments/Paragraphs.markdown")
+    , ("code blocks",   "tests/fragments/CodeBlocks.markdown")
     ]
 
 checkByComparingFragments :: Spec

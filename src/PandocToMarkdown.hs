@@ -8,7 +8,7 @@ where
 
 import Core.Text
 import Data.Foldable (foldl')
-import Text.Pandoc (Pandoc(..), Block(..), Inline(..))
+import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr)
 
 pandocToMarkdown :: Pandoc -> Rope
 pandocToMarkdown (Pandoc _ blocks) =
@@ -28,6 +28,7 @@ convertBlock block =
         Header level _ inlines -> headingToMarkdown level inlines
         Null -> mempty
         RawBlock _ string -> intoRope string
+        CodeBlock attr string -> codeToMarkdown attr string
         _ -> error msg
   in
     result <> "\n\n"
@@ -41,6 +42,20 @@ headingToMarkdown level inlines =
         1 -> text <> "\n" <> underline '=' text
         2 -> text <> "\n" <> underline '-' text
         n -> intoRope (replicate n '#') <> " " <> text
+
+codeToMarkdown :: Attr -> String -> Rope
+codeToMarkdown (_,tags,_) literal =
+  let
+    body = intoRope literal
+    lang = case tags of
+        []      -> ""
+        [tag]   -> intoRope tag
+        _       -> error "A code block can't have mulitple langage tags"
+  in
+    "```" <> lang <> "\n" <>
+    body <> "\n" <>
+    "```"
+
 
 inlinesToMarkdown :: [Inline] -> Rope
 inlinesToMarkdown inlines =
@@ -57,6 +72,7 @@ convertInline inline =
     Strong inlines -> "**" <> inlinesToMarkdown inlines <> "**"
     SoftBreak -> " "
     Image _ inlines (url, _) -> imageToMarkdown inlines url
+    Code _ string -> "`" <> intoRope string <> "`"
     _ -> error msg
 
 imageToMarkdown :: [Inline] -> String -> Rope
