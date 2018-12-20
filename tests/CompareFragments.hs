@@ -17,6 +17,7 @@ fragments =
     [ ("headings",      "tests/fragments/Headings.markdown")
     , ("paragraphs",    "tests/fragments/Paragraphs.markdown")
     , ("code blocks",   "tests/fragments/CodeBlocks.markdown")
+    , ("LaTeX blocks",  "tests/fragments/LatexBlocks.markdown")
     ]
 
 checkByComparingFragments :: Spec

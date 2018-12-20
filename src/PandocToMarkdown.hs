@@ -8,7 +8,7 @@ where
 
 import Core.Text
 import Data.Foldable (foldl')
-import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr)
+import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..))
 
 pandocToMarkdown :: Pandoc -> Rope
 pandocToMarkdown (Pandoc _ blocks) =
@@ -27,7 +27,7 @@ convertBlock block =
         Para  inlines -> wrap 75 (inlinesToMarkdown inlines)
         Header level _ inlines -> headingToMarkdown level inlines
         Null -> mempty
-        RawBlock _ string -> intoRope string
+        RawBlock (Format "tex") string -> intoRope string
         CodeBlock attr string -> codeToMarkdown attr string
         _ -> error msg
   in
@@ -73,6 +73,7 @@ convertInline inline =
     SoftBreak -> " "
     Image _ inlines (url, _) -> imageToMarkdown inlines url
     Code _ string -> "`" <> intoRope string <> "`"
+    RawInline (Format "tex") string -> intoRope string
     _ -> error msg
 
 imageToMarkdown :: [Inline] -> String -> Rope
