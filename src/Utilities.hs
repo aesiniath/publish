@@ -17,7 +17,7 @@ import Core.System
 import Core.Text
 import qualified Data.List as List (intercalate)
 import System.Directory (doesDirectoryExist, doesFileExist, createDirectory
-    , getModificationTime, copyFileWithMetadata)
+    , getModificationTime)
 import System.Exit (ExitCode(..))
 import System.FilePath.Posix (takeDirectory)
 import System.Process.Typed (proc, readProcess, setStdin, closed)

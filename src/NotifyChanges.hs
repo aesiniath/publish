@@ -7,9 +7,8 @@ module NotifyChanges
 where
 
 import Core.Program
-import Core.System
-import Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, readMVar)
-import qualified Data.ByteString.Char8 as C (ByteString, pack, unpack)
+import Control.Concurrent.MVar (newEmptyMVar, putMVar, readMVar)
+import qualified Data.ByteString.Char8 as C (ByteString, pack)
 import Data.Foldable (foldr, foldrM)
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as HashSet (empty, insert, member)
@@ -48,8 +47,8 @@ waitForChange files =
             -- setup inotifies
             watches <- foldrM (\dir acc -> do
                 runProgram (debugS "watching" dir)
-                watch <- addWatch notify [CloseWrite] dir (\event ->
-                    case event of
+                watch <- addWatch notify [CloseWrite] dir (\trigger ->
+                    case trigger of
                         Closed _ (Just file) _  -> do
                             let path = if dir == "./"
                                         then file
@@ -65,7 +64,7 @@ waitForChange files =
                 return (watch:acc)) [] dirs
 
             -- wait
-            readMVar block
+            _ <- readMVar block
             -- cleanup
             mapM_ removeWatch watches
 

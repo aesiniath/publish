@@ -5,11 +5,10 @@
 module CompareFragments where
 
 import Core.Text
-import Data.Foldable (foldl')
 import qualified Data.Text.IO as T
 import Test.Hspec hiding (context)
 
-import FormatDocument (loadFragment, markdownToPandoc)
+import FormatDocument (markdownToPandoc)
 import PandocToMarkdown (pandocToMarkdown)
 
 fragments :: [(String,FilePath)]

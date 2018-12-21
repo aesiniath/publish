@@ -32,12 +32,12 @@ executables:
     source-dirs: src
     main: RenderMain.hs
     other-modules:
-     - RenderDocument
      - Environment
      - LatexPreamble
      - NotifyChanges
      - OutputParser
-     - Paths_publish
+     - PandocToMarkdown
+     - RenderDocument
      - Utilities
 
   format:
@@ -45,6 +45,7 @@ executables:
     main: FormatMain.hs
     other-modules:
      - FormatDocument
+     - PandocToMarkdown
 
 tests:
   experiment:
@@ -68,5 +69,7 @@ tests:
     main: TestSuite.hs
     other-modules:
      - CompareFragments
+     - FormatDocument
+     - PandocToMarkdown
 
 

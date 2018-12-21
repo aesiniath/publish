@@ -15,7 +15,7 @@ import Core.Text
 import qualified Data.Text as T (Text)
 import qualified Data.Text.IO as T
 import System.IO (withFile, IOMode(..))
-import Text.Pandoc (runIOorExplode, readMarkdown, writeMarkdown, def
+import Text.Pandoc (runIOorExplode, readMarkdown, def
     , readerExtensions, pandocExtensions, disableExtension, Extension(..)
     , Pandoc)
 
