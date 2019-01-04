@@ -6,7 +6,7 @@ module RenderDocument
     )
 where
 
-import Control.Monad (filterM, when, forM_, forever, void)
+import Control.Monad (filterM, forM_, forever, void)
 import Core.Program
 import Core.System
 import Core.Text
@@ -16,9 +16,9 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import System.Directory (doesFileExist, doesDirectoryExist
-    , getModificationTime, copyFileWithMetadata)
+    , copyFileWithMetadata)
 import System.Exit (ExitCode(..))
-import System.FilePath.Posix (takeBaseName, takeFileName, takeExtension
+import System.FilePath.Posix (takeBaseName, takeExtension
     , replaceExtension, splitFileName, replaceDirectory)
 import System.IO (withFile, IOMode(WriteMode), hPutStrLn)
 import System.IO.Error (userError, IOError)
