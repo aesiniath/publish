@@ -1,6 +1,5 @@
-resolver: lts-12.20
+resolver: lts-12.24
 packages:
- - ../unbeliever
  - .
 
 extra-deps:
@@ -9,5 +8,6 @@ extra-deps:
  - haddock-library-1.7.0
  - hslua-1.0.1
  - hslua-module-text-0.2.0
+ - unbeliever-0.8.0.0
 
 
