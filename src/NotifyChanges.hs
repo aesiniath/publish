@@ -65,6 +65,7 @@ waitForChange files =
 
             -- wait
             _ <- readMVar block
+
             -- cleanup
             mapM_ removeWatch watches
 

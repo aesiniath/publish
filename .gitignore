@@ -6,6 +6,7 @@
 # symlinks to executables
 /render
 /format
+/check
 /experiment
 
 # runtime debris
