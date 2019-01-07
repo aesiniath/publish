@@ -8,6 +8,7 @@ where
 
 import Core.Text
 import Data.Foldable (foldl')
+import qualified Data.List as List
 import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..))
 
 pandocToMarkdown :: Pandoc -> Rope
@@ -29,6 +30,7 @@ convertBlock block =
         Null -> emptyRope
         RawBlock (Format "tex") string -> intoRope string
         CodeBlock attr string -> codeToMarkdown attr string
+        LineBlock list -> poemToMarkdown list
         _ -> error msg
   in
     result <> "\n\n"
@@ -56,6 +58,13 @@ codeToMarkdown (_,tags,_) literal =
     body <> "\n" <>
     "```"
 
+poemToMarkdown :: [[Inline]] -> Rope
+poemToMarkdown list =
+    mconcat (List.intersperse "\n" (fmap prefix list))
+  where
+    prefix inlines = "| " <> inlinesToMarkdown inlines
+
+----
 
 inlinesToMarkdown :: [Inline] -> Rope
 inlinesToMarkdown inlines =
