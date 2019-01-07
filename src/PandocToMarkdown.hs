@@ -16,7 +16,7 @@ pandocToMarkdown (Pandoc _ blocks) =
 
 blocksToMarkdown :: [Block] -> Rope
 blocksToMarkdown blocks =
-    foldl' (\text block -> append (convertBlock block) text) mempty blocks
+    foldl' (\text block -> append (convertBlock block) text) emptyRope blocks
 
 convertBlock :: Block -> Rope
 convertBlock block =
@@ -26,7 +26,7 @@ convertBlock block =
         Plain inlines -> inlinesToMarkdown inlines
         Para  inlines -> wrap 75 (inlinesToMarkdown inlines)
         Header level _ inlines -> headingToMarkdown level inlines
-        Null -> mempty
+        Null -> emptyRope
         RawBlock (Format "tex") string -> intoRope string
         CodeBlock attr string -> codeToMarkdown attr string
         _ -> error msg
@@ -59,7 +59,7 @@ codeToMarkdown (_,tags,_) literal =
 
 inlinesToMarkdown :: [Inline] -> Rope
 inlinesToMarkdown inlines =
-    foldl' (\text inline -> append (convertInline inline) text) mempty inlines
+    foldl' (\text inline -> append (convertInline inline) text) emptyRope inlines
 
 convertInline :: Inline -> Rope
 convertInline inline =
@@ -84,4 +84,3 @@ imageToMarkdown inlines url =
   in
     "![" <> text <> "](" <> target <> ")"
     
-
