@@ -6,7 +6,7 @@ but authoring content for them in raw HTML is tedious. This led to the
 advent of lightweight markup formats like Markdown that could easily be
 converted to HTML (it is no co-incidence that these styles represent
 documents using formatting conventions that were evolved in the early days
-of the internet by users who wanted to conveyed semantic information in
+of the internet by users who wanted to convey semantic information in
 text-based mailing lists and Usenet newsgroups).
 
 Somewhat surprisingly, the web continues to struggle with taking content
@@ -15,7 +15,7 @@ success that they don't feel the need to cater for this use case; certainly
 many people are happy to read content on screens surrounded by flashy
 banner ads.
 
-For certain audiences, however, getting high-quality printed output on
+For some audiences, however, getting high-quality printed output on
 **paper** (or at least into a form that _could_ be printed to paper) is the
 primary requirement. These users include
 
