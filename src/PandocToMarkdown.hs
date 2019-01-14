@@ -17,23 +17,31 @@ pandocToMarkdown (Pandoc _ blocks) =
 
 blocksToMarkdown :: [Block] -> Rope
 blocksToMarkdown blocks =
-    foldl' (\text block -> append (convertBlock block) text) emptyRope blocks
+    foldl' (\text block -> text <> (convertBlock 75 block) <> "\n") emptyRope blocks
 
-convertBlock :: Block -> Rope
-convertBlock block =
+convertBlock :: Int -> Block -> Rope
+convertBlock margin block =
   let
-    msg = "Unfinished block: " ++ show block
-    result = case block of
-        Plain inlines -> inlinesToMarkdown inlines
-        Para  inlines -> wrap 75 (inlinesToMarkdown inlines)
-        Header level _ inlines -> headingToMarkdown level inlines
-        Null -> emptyRope
-        RawBlock (Format "tex") string -> intoRope string
-        CodeBlock attr string -> codeToMarkdown attr string
-        LineBlock list -> poemToMarkdown list
-        _ -> error msg
-  in
-    result <> "\n\n"
+    msg = "Unfinished block: " ++ show block -- FIXME
+  in case block of
+    Plain inlines -> paragraphToMarkdown margin inlines
+    Para  inlines -> paragraphToMarkdown margin inlines
+    Header level _ inlines -> headingToMarkdown level inlines
+    Null -> emptyRope
+    RawBlock (Format "tex") string -> intoRope string <> "\n"
+    RawBlock _ _ -> error msg
+    CodeBlock attr string -> codeToMarkdown attr string
+    LineBlock list -> poemToMarkdown list
+    BlockQuote blocks -> quoteToMarkdown margin blocks
+    _ -> error msg
+
+plaintextToMarkdown :: [Inline] -> Rope
+plaintextToMarkdown inlines =
+    inlinesToMarkdown inlines <> "\n"
+
+paragraphToMarkdown :: Int -> [Inline] -> Rope
+paragraphToMarkdown margin inlines =
+    wrap margin (inlinesToMarkdown inlines) <> "\n"
 
 headingToMarkdown :: Int -> [Inline] -> Rope
 headingToMarkdown level inlines =
@@ -41,9 +49,9 @@ headingToMarkdown level inlines =
     text = inlinesToMarkdown inlines
   in
     case level of
-        1 -> text <> "\n" <> underline '=' text
-        2 -> text <> "\n" <> underline '-' text
-        n -> intoRope (replicate n '#') <> " " <> text
+        1 -> text <> "\n" <> underline '=' text <> "\n"
+        2 -> text <> "\n" <> underline '-' text <> "\n"
+        n -> intoRope (replicate n '#') <> " " <> text <> "\n"
 
 codeToMarkdown :: Attr -> String -> Rope
 codeToMarkdown (_,tags,_) literal =
@@ -56,13 +64,23 @@ codeToMarkdown (_,tags,_) literal =
   in
     "```" <> lang <> "\n" <>
     body <> "\n" <>
-    "```"
+    "```" <> "\n"
 
 poemToMarkdown :: [[Inline]] -> Rope
 poemToMarkdown list =
-    mconcat (List.intersperse "\n" (fmap prefix list))
+    mconcat (List.intersperse "\n" (fmap prefix list)) <> "\n"
   where
     prefix inlines = "| " <> inlinesToMarkdown inlines
+
+quoteToMarkdown :: Int -> [Block] -> Rope
+quoteToMarkdown margin blocks =
+    foldl' (\text block -> text <> prefix block) emptyRope blocks
+  where
+    prefix :: Block -> Rope
+    prefix = foldl' (\text line -> text <> "> " <> line <> "\n") emptyRope . rows
+
+    rows :: Block -> [Rope]
+    rows = breakLines . convertBlock (margin - 2)
 
 ----
 
