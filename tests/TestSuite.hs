@@ -2,12 +2,12 @@
 
 import Test.Hspec
 
+import Core.System
 import CompareFragments
 
 main :: IO ()
 main = do
-    hspec suite
-    putStrLn "."
+    finally (hspec suite) (putStrLn ".")
 
 suite :: Spec
 suite = do
