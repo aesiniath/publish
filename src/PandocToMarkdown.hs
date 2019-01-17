@@ -33,11 +33,12 @@ convertBlock margin block =
     CodeBlock attr string -> codeToMarkdown attr string
     LineBlock list -> poemToMarkdown list
     BlockQuote blocks -> quoteToMarkdown margin blocks
+    BulletList blockss -> listToMarkdown margin blockss
     _ -> error msg
 
-plaintextToMarkdown :: [Inline] -> Rope
-plaintextToMarkdown inlines =
-    inlinesToMarkdown inlines <> "\n"
+plaintextToMarkdown :: Int -> [Inline] -> Rope
+plaintextToMarkdown margin inlines =
+    wrap margin (inlinesToMarkdown inlines)
 
 paragraphToMarkdown :: Int -> [Inline] -> Rope
 paragraphToMarkdown margin inlines =
@@ -81,6 +82,33 @@ quoteToMarkdown margin blocks =
 
     rows :: Block -> [Rope]
     rows = breakLines . convertBlock (margin - 2)
+
+listToMarkdown :: Int -> [[Block]] -> Rope
+listToMarkdown margin items = case items of
+    [] -> emptyRope
+    (blocks1:blockss) -> listitem blocks1 <> foldl'
+        (\text blocks -> text <> spacer blocks <> listitem blocks) emptyRope blockss
+  where
+    listitem :: [Block] -> Rope
+    listitem [] = emptyRope
+    listitem (block1:blocks) = indent True block1 <> foldl'
+        (\ text blockN -> text <> indent False blockN) emptyRope blocks
+
+    spacer :: [Block] -> Rope
+    spacer [] = emptyRope
+    spacer (block:_) = case block of
+        Plain _ -> emptyRope
+        Para _  -> "\n"
+        _       -> "\n"
+
+    indent :: Bool -> Block -> Rope
+    indent first =
+        snd . foldl' f (first,emptyRope) . breakLines . convertBlock (margin - 3)
+
+    f :: (Bool,Rope) -> Rope -> (Bool,Rope)
+    f (first,text) line = if first
+        then (False,text <> " - " <> line <> "\n")
+        else (False,text <> "   " <> line <> "\n")
 
 ----
 
