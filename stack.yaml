@@ -1,13 +1,7 @@
-resolver: lts-12.24
+resolver: lts-13.2
 packages:
  - .
 
 extra-deps:
- - pandoc-2.5
- - HsYAML-0.1.1.2
- - haddock-library-1.7.0
- - hslua-1.0.1
- - hslua-module-text-0.2.0
- - unbeliever-0.8.0.0
-
+ - ../unbeliever
 
