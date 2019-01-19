@@ -9,7 +9,9 @@ where
 import Core.Text
 import Data.Foldable (foldl')
 import qualified Data.List as List
-import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..))
+import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
+    , ListAttributes)
+import Text.Pandoc.Shared (orderedListMarkers)
 
 pandocToMarkdown :: Pandoc -> Rope
 pandocToMarkdown (Pandoc _ blocks) =
@@ -33,12 +35,10 @@ convertBlock margin block =
     CodeBlock attr string -> codeToMarkdown attr string
     LineBlock list -> poemToMarkdown list
     BlockQuote blocks -> quoteToMarkdown margin blocks
-    BulletList blockss -> listToMarkdown margin blockss
+    BulletList blockss -> bulletlistToMarkdown margin blockss
+    OrderedList attrs blockss -> orderedlistToMarkdown margin attrs blockss
     _ -> error msg
 
-plaintextToMarkdown :: Int -> [Inline] -> Rope
-plaintextToMarkdown margin inlines =
-    wrap margin (inlinesToMarkdown inlines)
 
 paragraphToMarkdown :: Int -> [Inline] -> Rope
 paragraphToMarkdown margin inlines =
@@ -83,16 +83,29 @@ quoteToMarkdown margin blocks =
     rows :: Block -> [Rope]
     rows = breakLines . convertBlock (margin - 2)
 
-listToMarkdown :: Int -> [[Block]] -> Rope
-listToMarkdown margin items = case items of
+bulletlistToMarkdown :: Int -> [[Block]] -> Rope
+bulletlistToMarkdown = listToMarkdown (repeat " -  ")
+
+orderedlistToMarkdown :: Int -> ListAttributes -> [[Block]] -> Rope
+orderedlistToMarkdown margin (num,style,delim) blockss =
+  let
+    intoMarkers = fmap (\text -> " " <> text <> " ") . fmap intoRope . orderedListMarkers
+  in
+    listToMarkdown (intoMarkers (num,style,Period)) margin blockss
+
+listToMarkdown :: [Rope] -> Int -> [[Block]] -> Rope
+listToMarkdown markers margin items =
+  case pairs of
     [] -> emptyRope
-    (blocks1:blockss) -> listitem blocks1 <> foldl'
-        (\text blocks -> text <> spacer blocks <> listitem blocks) emptyRope blockss
+    ((marker1,blocks1):pairsN) -> listitem marker1 blocks1 <> foldl'
+        (\text (markerN,blocksN) -> text <> spacer blocksN <> listitem markerN blocksN) emptyRope pairsN
   where
-    listitem :: [Block] -> Rope
-    listitem [] = emptyRope
-    listitem (block1:blocks) = indent True block1 <> foldl'
-        (\ text blockN -> text <> indent False blockN) emptyRope blocks
+    pairs = zip markers items
+
+    listitem :: Rope -> [Block] -> Rope
+    listitem _ [] = emptyRope
+    listitem marker (block1:blocks) = indent marker True block1 <> foldl'
+        (\ text blockN -> text <> indent marker False blockN) emptyRope blocks
 
     spacer :: [Block] -> Rope
     spacer [] = emptyRope
@@ -101,14 +114,14 @@ listToMarkdown margin items = case items of
         Para _  -> "\n"
         _       -> "\n"
 
-    indent :: Bool -> Block -> Rope
-    indent first =
-        snd . foldl' f (first,emptyRope) . breakLines . convertBlock (margin - 3)
+    indent :: Rope -> Bool -> Block -> Rope
+    indent marker first =
+        snd . foldl' (f marker) (first,emptyRope) . breakLines . convertBlock (margin - 4)
 
-    f :: (Bool,Rope) -> Rope -> (Bool,Rope)
-    f (first,text) line = if first
-        then (False,text <> " - " <> line <> "\n")
-        else (False,text <> "   " <> line <> "\n")
+    f :: Rope -> (Bool,Rope) -> Rope -> (Bool,Rope)
+    f marker (first,text) line = if first
+        then (False,text <> marker <> line <> "\n")
+        else (False,text <> "    " <> line <> "\n")
 
 ----
 
