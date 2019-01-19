@@ -91,7 +91,7 @@ orderedlistToMarkdown margin (num,style,delim) blockss =
   let
     intoMarkers = fmap (\text -> " " <> text <> " ") . fmap intoRope . orderedListMarkers
   in
-    listToMarkdown (intoMarkers (num,style,Period)) margin blockss
+    listToMarkdown (intoMarkers (num,style,delim)) margin blockss
 
 listToMarkdown :: [Rope] -> Int -> [[Block]] -> Rope
 listToMarkdown markers margin items =
