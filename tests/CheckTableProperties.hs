@@ -11,10 +11,10 @@ import Control.DeepSeq (force)
 import Control.Exception (evaluate)
 import Test.Hspec
 
-import PandocToMarkdown (rectanglerize)
+import PandocToMarkdown (NotSafe, rectanglerize)
 
-boom :: Selector NotSafe
-boom = const True
+notsafe :: Selector NotSafe
+notsafe = const True
 
 checkTableProperties :: Spec
 checkTableProperties = do
@@ -23,5 +23,5 @@ checkTableProperties = do
             rectanglerize 6 "First Name" `shouldBe` ["First ","Name  "]
 
         it "Rectanglerizing a block with too long lines should throw" $
-            (evaluate . force) (rectanglerize 7 "Borough of Kensington") `shouldThrow` anyErrorCall
+            (evaluate . force) (rectanglerize 7 "Borough of Kensington") `shouldThrow` notsafe
             
