@@ -2,7 +2,10 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module CompareFragments where
+module CompareFragments
+    ( checkByComparingFragments
+    )
+where
 
 import Core.Text
 import qualified Data.Text.IO as T

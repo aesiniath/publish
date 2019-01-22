@@ -3,10 +3,13 @@
 
 module PandocToMarkdown
     ( pandocToMarkdown
+    , NotSafe(..)
+    , rectanglerize
     )
 where
 
 import Core.Text
+import Core.System
 import Data.Foldable (foldl')
 import qualified Data.List as List
 import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
@@ -122,6 +125,27 @@ listToMarkdown markers margin items =
     f marker (first,text) line = if first
         then (False,text <> marker <> line <> "\n")
         else (False,text <> "    " <> line <> "\n")
+
+
+
+data NotSafe = NotSafe
+    deriving Show
+
+instance Exception NotSafe
+
+rectanglerize :: Int -> Rope -> [Rope]
+rectanglerize size text =
+  let
+    ls = breakLines (wrap size text)
+
+    fix l | width l <  size = l <> intoRope (replicate (size - width l) ' ')
+          | width l == size = l
+          | otherwise       = error "Line wider than permitted size"
+  in
+    foldr (\l text -> fix l:text) [] ls
+
+
+
 
 ----
 

@@ -81,6 +81,7 @@ tests:
      - tests
     main: TestSuite.hs
     other-modules:
+     - CheckTableProperties
      - CompareFragments
      - FormatDocument
      - PandocToMarkdown
