@@ -7,13 +7,21 @@ module CheckTableProperties
 where
 
 import Core.Text
+import Control.DeepSeq (force)
+import Control.Exception (evaluate)
 import Test.Hspec
 
-import PandocToMarkdown (NotSafe(..), rectanglerize)
+import PandocToMarkdown (rectanglerize)
+
+boom :: Selector NotSafe
+boom = const True
 
 checkTableProperties :: Spec
 checkTableProperties = do
     describe "Table rendering code" $ do
         it "Making wrapped text into rectangles" $
             rectanglerize 6 "First Name" `shouldBe` ["First ","Name  "]
+
+        it "Rectanglerizing a block with too long lines should throw" $
+            (evaluate . force) (rectanglerize 7 "Borough of Kensington") `shouldThrow` anyErrorCall
             

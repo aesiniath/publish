@@ -3,7 +3,6 @@
 
 module PandocToMarkdown
     ( pandocToMarkdown
-    , NotSafe(..)
     , rectanglerize
     )
 where
@@ -131,7 +130,6 @@ listToMarkdown markers margin items =
 data NotSafe = NotSafe
     deriving Show
 
-instance Exception NotSafe
 
 rectanglerize :: Int -> Rope -> [Rope]
 rectanglerize size text =
@@ -143,8 +141,6 @@ rectanglerize size text =
           | otherwise       = error "Line wider than permitted size"
   in
     foldr (\l text -> fix l:text) [] ls
-
-
 
 
 ----
