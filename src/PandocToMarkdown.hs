@@ -5,6 +5,7 @@ module PandocToMarkdown
     ( pandocToMarkdown
     , NotSafe(..)
     , rectanglerize
+    , combineRectangles
     )
 where
 
@@ -64,7 +65,7 @@ codeToMarkdown (_,tags,_) literal =
     lang = case tags of
         []      -> ""
         [tag]   -> intoRope tag
-        _       -> error "A code block can't have mulitple langage tags"
+        _       -> impureThrow (NotSafe "A code block can't have mulitple langage tags")
   in
     "```" <> lang <> "\n" <>
     body <> "\n" <>
@@ -145,6 +146,33 @@ rectanglerize size text =
   in
     foldr (\l text -> fix l:text) [] ls
 
+newtype Rectangle = Rectangle [Rope]
+
+combineRectangles :: [Rope] -> [Rope] -> [Rope]
+combineRectangles texts1 texts2 =
+  let
+    len1 = length texts1
+    len2 = length texts2
+
+    sizing :: [Rope] -> Int
+    sizing [] = 0
+    sizing texts = width (head texts)
+
+    target = max len1 len2
+    extra1 = target - len1
+    extra2 = target - len2
+
+    pad :: Int -> [Rope] -> [Rope]
+    pad count texts = texts ++ replicate count (intoRope (replicate (sizing texts) ' '))
+
+    texts1' = pad extra1 texts1
+    texts2' = pad extra2 texts2
+
+    pairs = zip texts1' texts2'
+
+    result = foldr (\ (text1,text2) texts -> text1 <> text2 : texts) [] pairs
+  in
+    result
 
 
 
