@@ -6,6 +6,7 @@ module PandocToMarkdown
     , NotSafe(..)
     , rectanglerize
     , combineRectangles
+    , buildRow
     )
 where
 
@@ -148,25 +149,25 @@ rectanglerize size text =
 
 newtype Rectangle = Rectangle [Rope]
 
+widthOf :: [Rope] -> Int
+widthOf [] = 0
+widthOf texts = width (head texts)
+
 combineRectangles :: [Rope] -> [Rope] -> [Rope]
 combineRectangles texts1 texts2 =
   let
-    len1 = length texts1
-    len2 = length texts2
+    height1 = length texts1
+    height2 = length texts2
 
-    sizing :: [Rope] -> Int
-    sizing [] = 0
-    sizing texts = width (head texts)
+    target = max height1 height2
+    extra1 = target - height1
+    extra2 = target - height2
 
-    target = max len1 len2
-    extra1 = target - len1
-    extra2 = target - len2
+    padRows :: Int -> [Rope] -> [Rope]
+    padRows count texts = texts ++ replicate count (intoRope (replicate (widthOf texts) ' '))
 
-    pad :: Int -> [Rope] -> [Rope]
-    pad count texts = texts ++ replicate count (intoRope (replicate (sizing texts) ' '))
-
-    texts1' = pad extra1 texts1
-    texts2' = pad extra2 texts2
+    texts1' = padRows extra1 texts1
+    texts2' = padRows extra2 texts2
 
     pairs = zip texts1' texts2'
 
@@ -174,6 +175,21 @@ combineRectangles texts1 texts2 =
   in
     result
 
+ensureWidth :: Int -> [Rope] -> [Rope]
+ensureWidth size texts =
+    if widthOf texts < size
+        then rectanglerize size (foldl' (<>) emptyRope texts)
+        else texts
+
+
+buildRow :: [Int] -> [[Rope]] -> Rope
+buildRow cellWidths textss =
+  let
+    pairs = zip cellWidths textss
+    textss' = fmap (\ (desired,texts) -> ensureWidth desired texts) pairs
+    result = foldl' (\ acc texts -> combineRectangles acc texts) [] textss'
+  in
+    foldl' (<>) emptyRope (List.intersperse "\n" result)
 
 
 ----

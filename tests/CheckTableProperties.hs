@@ -11,7 +11,7 @@ import Control.DeepSeq (force)
 import Control.Exception (evaluate)
 import Test.Hspec
 
-import PandocToMarkdown (NotSafe, rectanglerize, combineRectangles)
+import PandocToMarkdown (NotSafe, rectanglerize, combineRectangles, buildRow)
 
 notsafe :: Selector NotSafe
 notsafe = const True
@@ -75,3 +75,22 @@ checkTableProperties = do
                 , "          lots play "
                 ]
 
+        it "Given several cells, builds a row" $
+          let
+            cell1 =
+                [ "This is an"
+                , "emergency "
+                , "no problem"
+                ]
+            cell2 =
+                [ "Ode to Joy"
+                , "is nice   "
+                , "piece that"
+                , "lots play "]
+            result = buildRow [10,10] [cell1,cell2]
+          in do
+            result `shouldBe`
+                   "This is anOde to Joy\n"
+                <> "emergency is nice   \n"
+                <> "no problempiece that\n"
+                <> "          lots play "
