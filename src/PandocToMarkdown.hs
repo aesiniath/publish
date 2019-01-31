@@ -15,7 +15,7 @@ import Core.System
 import Data.Foldable (foldl')
 import qualified Data.List as List
 import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
-    , ListAttributes)
+    , ListAttributes, Alignment(..), TableCell)
 import Text.Pandoc.Shared (orderedListMarkers)
 
 pandocToMarkdown :: Pandoc -> Rope
@@ -42,7 +42,13 @@ convertBlock margin block =
     BlockQuote blocks -> quoteToMarkdown margin blocks
     BulletList blockss -> bulletlistToMarkdown margin blockss
     OrderedList attrs blockss -> orderedlistToMarkdown margin attrs blockss
+    HorizontalRule -> "---\n"
+    Table caption alignments sizes headers rows -> tableToMarkdown caption alignments sizes headers rows
     _ -> error msg
+
+plaintextToMarkdown :: Int -> [Inline] -> Rope
+plaintextToMarkdown margin inlines =
+    wrap margin (inlinesToMarkdown inlines)
 
 
 paragraphToMarkdown :: Int -> [Inline] -> Rope
@@ -129,6 +135,37 @@ listToMarkdown markers margin items =
         else (False,text <> "    " <> line <> "\n")
 
 
+-- Assumtions:
+-- 1. all the lists are the same length
+-- 2. headers widths will be in increments of 5 characters?
+-- 3. no complex tables
+tableToMarkdown
+    :: [Inline]
+    -> [Alignment]
+    -> [Double]
+    -> [TableCell]
+    -> [[TableCell]]
+    -> Rope
+tableToMarkdown caption alignments sizes headers rows =
+    header
+  where
+    header = buildRow blockSizes (headerToMarkdown headers)
+
+    headerToMarkdown :: [TableCell] -> [[Rope]]
+    headerToMarkdown = fmap convertHeaderToRectangle . headerSizes blockSizes 
+
+    convertHeaderToRectangle :: (Int,Block) -> [Rope]
+    convertHeaderToRectangle (size,Plain inlines) =
+        rectanglerize size (plaintextToMarkdown size inlines)
+    convertHeaderToRectangle (size,_) =
+        impureThrow (NotSafe "Incorrect Block type encountered")
+
+    -- FIXME single block only, else throw exception
+    headerSizes :: [Int] -> [[Block]] -> [(Int,Block)]
+    headerSizes sizes headers = zipWith (\size (block:_) -> (size,block)) sizes headers
+
+    blockSizes :: [Int]
+    blockSizes = repeat 15 -- FIXME
 
 
 data NotSafe = NotSafe String
@@ -147,7 +184,7 @@ rectanglerize size text =
   in
     foldr (\l text -> fix l:text) [] ls
 
-newtype Rectangle = Rectangle [Rope]
+data Rectangle = Rectangle Int [Rope]
 
 widthOf :: [Rope] -> Int
 widthOf [] = 0

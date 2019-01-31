@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module CheckTableProperties
@@ -11,7 +12,9 @@ import Control.DeepSeq (force)
 import Control.Exception (evaluate)
 import Test.Hspec
 
-import PandocToMarkdown (NotSafe, rectanglerize, combineRectangles, buildRow)
+import FormatDocument (markdownToPandoc)
+import PandocToMarkdown (NotSafe, rectanglerize, combineRectangles
+    , buildRow, pandocToMarkdown)
 
 notsafe :: Selector NotSafe
 notsafe = const True
@@ -94,3 +97,20 @@ checkTableProperties = do
                 <> "emergency is nice   \n"
                 <> "no problempiece that\n"
                 <> "          lots play "
+
+        it "Header rows format" $
+          let
+            table = [quote|
+| First | Second | Third |
+|------:|:----:|---------|
+|   1  |  2  |  3   |
+            |]
+          in do
+            doc <- markdownToPandoc table
+            let result = pandocToMarkdown doc
+            result `shouldBe` [quote|
+----------------------------------------------- 
+First           Second          Third          
+--------------- --------------- ---------------
+----------------------------------------------- 
+            |]
