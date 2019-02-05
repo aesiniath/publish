@@ -19,6 +19,8 @@ import Control.DeepSeq (NFData)
 import Core.Text
 import Core.System
 import Data.Foldable (foldl')
+import Data.Monoid (Monoid(..))
+import Data.Semigroup (Semigroup(..))
 import qualified Data.List as List
 import GHC.Generics (Generic)
 import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
@@ -183,8 +185,20 @@ instance Exception NotSafe
 data Rectangle = Rectangle Int Int [Rope]
     deriving (Eq, Show, Generic, NFData)
 
+widthOf :: Rectangle -> Int
+widthOf (Rectangle size _ _) = size
+
+heightOf :: Rectangle -> Int
+heightOf (Rectangle _ height _) = height
+
 rowsFrom :: Rectangle -> [Rope]
 rowsFrom (Rectangle _ _ texts) = texts
+
+instance Semigroup Rectangle where
+    (<>) = combineRectangles
+
+instance Monoid Rectangle where
+    mempty = Rectangle 0 0 []
 
 rectanglerize :: Int -> Rope -> Rectangle
 rectanglerize size text =
@@ -198,12 +212,6 @@ rectanglerize size text =
     result = foldr (\l text -> fix l:text) [] ls
   in
     Rectangle size (length result) result
-
-widthOf :: Rectangle -> Int
-widthOf (Rectangle size _ _) = size
-
-heightOf :: Rectangle -> Int
-heightOf (Rectangle _ height _) = height
 
 combineRectangles :: Rectangle -> Rectangle -> Rectangle
 combineRectangles rect1@(Rectangle size1 height1 texts1) rect2@(Rectangle size2 height2 texts2) =
@@ -240,13 +248,12 @@ buildRow cellWidths rects =
   let
     pairs = zip cellWidths rects
     rects' = fmap (\ (desired,rect) -> ensureWidth desired rect) pairs
-    blank = Rectangle 0 0 []
-    result = foldl' (\ acc rect -> combineRectangles acc rect) blank rects
+    result = foldl' (<>) mempty rects
   in
     foldl' (<>) emptyRope (List.intersperse "\n" (rowsFrom result))
 
 
-----
+---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 
 inlinesToMarkdown :: [Inline] -> Rope
 inlinesToMarkdown inlines =

@@ -24,6 +24,7 @@ fragments =
     , ("blockquotes",   "tests/fragments/Blockquotes.markdown")
     , ("bulletlist",    "tests/fragments/BulletList.markdown")
     , ("orderedlist",   "tests/fragments/OrderedList.markdown")
+    , ("multiline table", "tests/fragments/MultilineTable.markdown")
     ]
 
 checkByComparingFragments :: Spec
