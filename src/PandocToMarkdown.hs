@@ -1,19 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module PandocToMarkdown
     ( pandocToMarkdown
     , NotSafe(..)
+    , Rectangle(..)
     , rectanglerize
     , combineRectangles
     , buildRow
+    , widthOf
+    , heightOf
     )
 where
 
+import Control.DeepSeq (NFData)
 import Core.Text
 import Core.System
 import Data.Foldable (foldl')
 import qualified Data.List as List
+import GHC.Generics (Generic)
 import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
     , ListAttributes, Alignment(..), TableCell)
 import Text.Pandoc.Shared (orderedListMarkers)
@@ -151,10 +158,10 @@ tableToMarkdown caption alignments sizes headers rows =
   where
     header = buildRow blockSizes (headerToMarkdown headers)
 
-    headerToMarkdown :: [TableCell] -> [[Rope]]
+    headerToMarkdown :: [TableCell] -> [Rectangle]
     headerToMarkdown = fmap convertHeaderToRectangle . headerSizes blockSizes 
 
-    convertHeaderToRectangle :: (Int,Block) -> [Rope]
+    convertHeaderToRectangle :: (Int,Block) -> Rectangle
     convertHeaderToRectangle (size,Plain inlines) =
         rectanglerize size (plaintextToMarkdown size inlines)
     convertHeaderToRectangle (size,_) =
@@ -173,7 +180,13 @@ data NotSafe = NotSafe String
 
 instance Exception NotSafe
 
-rectanglerize :: Int -> Rope -> [Rope]
+data Rectangle = Rectangle Int Int [Rope]
+    deriving (Eq, Show, Generic, NFData)
+
+rowsFrom :: Rectangle -> [Rope]
+rowsFrom (Rectangle _ _ texts) = texts
+
+rectanglerize :: Int -> Rope -> Rectangle
 rectanglerize size text =
   let
     ls = breakLines (wrap size text)
@@ -181,52 +194,56 @@ rectanglerize size text =
     fix l | width l <  size = l <> intoRope (replicate (size - width l) ' ')
           | width l == size = l
           | otherwise       = impureThrow (NotSafe "Line wider than permitted size")
+
+    result = foldr (\l text -> fix l:text) [] ls
   in
-    foldr (\l text -> fix l:text) [] ls
+    Rectangle size (length result) result
 
-data Rectangle = Rectangle Int [Rope]
+widthOf :: Rectangle -> Int
+widthOf (Rectangle size _ _) = size
 
-widthOf :: [Rope] -> Int
-widthOf [] = 0
-widthOf texts = width (head texts)
+heightOf :: Rectangle -> Int
+heightOf (Rectangle _ height _) = height
 
-combineRectangles :: [Rope] -> [Rope] -> [Rope]
-combineRectangles texts1 texts2 =
+combineRectangles :: Rectangle -> Rectangle -> Rectangle
+combineRectangles rect1@(Rectangle size1 height1 texts1) rect2@(Rectangle size2 height2 texts2) =
   let
-    height1 = length texts1
-    height2 = length texts2
-
     target = max height1 height2
     extra1 = target - height1
     extra2 = target - height2
 
-    padRows :: Int -> [Rope] -> [Rope]
-    padRows count texts = texts ++ replicate count (intoRope (replicate (widthOf texts) ' '))
+    padRows :: Int -> Rectangle -> [Rope]
+    padRows count (Rectangle size _ texts) =
+      let
+        texts' = texts ++ replicate count (intoRope (replicate size ' '))
+      in
+        texts'
 
-    texts1' = padRows extra1 texts1
-    texts2' = padRows extra2 texts2
+    texts1' = padRows extra1 rect1
+    texts2' = padRows extra2 rect2
 
     pairs = zip texts1' texts2'
 
     result = foldr (\ (text1,text2) texts -> text1 <> text2 : texts) [] pairs
   in
-    result
+    Rectangle (size1 + size2) target  result
 
-ensureWidth :: Int -> [Rope] -> [Rope]
-ensureWidth size texts =
-    if widthOf texts < size
-        then rectanglerize size (foldl' (<>) emptyRope texts)
-        else texts
+ensureWidth :: Int -> Rectangle -> Rectangle
+ensureWidth request rect@(Rectangle size height texts) =
+    if widthOf rect < request
+        then rectanglerize request (foldl' (<>) emptyRope texts)
+        else rect
 
 
-buildRow :: [Int] -> [[Rope]] -> Rope
-buildRow cellWidths textss =
+buildRow :: [Int] -> [Rectangle] -> Rope
+buildRow cellWidths rects =
   let
-    pairs = zip cellWidths textss
-    textss' = fmap (\ (desired,texts) -> ensureWidth desired texts) pairs
-    result = foldl' (\ acc texts -> combineRectangles acc texts) [] textss'
+    pairs = zip cellWidths rects
+    rects' = fmap (\ (desired,rect) -> ensureWidth desired rect) pairs
+    blank = Rectangle 0 0 []
+    result = foldl' (\ acc rect -> combineRectangles acc rect) blank rects
   in
-    foldl' (<>) emptyRope (List.intersperse "\n" result)
+    foldl' (<>) emptyRope (List.intersperse "\n" (rowsFrom result))
 
 
 ----
