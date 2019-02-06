@@ -12,6 +12,7 @@ module PandocToMarkdown
     , buildRow
     , widthOf
     , heightOf
+    , tableToMarkdown
     )
 where
 
@@ -248,10 +249,18 @@ buildRow cellWidths rects =
   let
     pairs = zip cellWidths rects
     rects' = fmap (\ (desired,rect) -> ensureWidth desired rect) pairs
-    result = foldl' (<>) mempty rects
+    wall = vertical ' ' rects'
+    result = foldl' (<>) mempty . List.intersperse wall $ rects'
   in
     foldl' (<>) emptyRope (List.intersperse "\n" (rowsFrom result))
 
+vertical :: Char -> [Rectangle] -> Rectangle
+vertical ch rects =
+  let
+    height = maximum (fmap heightOf rects)
+    border = replicate height (intoRope [ch])
+  in
+    Rectangle 1 height border
 
 ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 

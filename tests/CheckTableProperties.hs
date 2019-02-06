@@ -14,7 +14,10 @@ import Test.Hspec
 
 import FormatDocument (markdownToPandoc)
 import PandocToMarkdown (NotSafe, Rectangle(..), rectanglerize
-    , combineRectangles, buildRow, pandocToMarkdown, widthOf, heightOf)
+    , combineRectangles, buildRow, pandocToMarkdown, widthOf, heightOf
+    , tableToMarkdown)
+import Text.Pandoc (Block(..), Inline(..)
+    , Alignment(..), TableCell)
 
 notsafe :: Selector NotSafe
 notsafe = const True
@@ -93,12 +96,32 @@ checkTableProperties = do
             result = buildRow [10,10] [cell1,cell2]
           in do
             result `shouldBe`
-                   "This is anOde to Joy\n"
-                <> "emergency is nice   \n"
-                <> "no problempiece that\n"
-                <> "          lots play "
+                   "This is an Ode to Joy\n"
+                <> "emergency  is nice   \n"
+                <> "no problem piece that\n"
+                <> "           lots play "
 
         it "Header rows format" $
+          let
+            result = tableToMarkdown
+                []
+                [AlignLeft, AlignLeft, AlignLeft]
+                [0.3,0.3,0.3]
+                [ [Plain [Str "First"]]
+                , [Plain [Str "Second"]]
+                , [Plain [Str "Third"]]
+                ]
+                []
+          in do
+            result `shouldBe` [quote|
+-----------------------------------------------
+First           Second          Third          
+--------------- --------------- ---------------
+123456789012345
+-----------------------------------------------
+            |]
+
+        it "a minimal complete example reformats properly" $
           let
             table = [quote|
 | First | Second | Third |
