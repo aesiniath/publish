@@ -22,7 +22,7 @@ import Core.System
 import Data.Foldable (foldl')
 import Data.Monoid (Monoid(..))
 import Data.Semigroup (Semigroup(..))
-import qualified Data.List as List
+import Data.List (intersperse)
 import GHC.Generics (Generic)
 import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
     , ListAttributes, Alignment(..), TableCell)
@@ -90,7 +90,7 @@ codeToMarkdown (_,tags,_) literal =
 
 poemToMarkdown :: [[Inline]] -> Rope
 poemToMarkdown list =
-    mconcat (List.intersperse "\n" (fmap prefix list)) <> "\n"
+    mconcat (intersperse "\n" (fmap prefix list)) <> "\n"
   where
     prefix inlines = "| " <> inlinesToMarkdown inlines
 
@@ -250,7 +250,7 @@ buildRow cellWidths rects =
     pairs = zip cellWidths rects
     rects' = fmap (\ (desired,rect) -> ensureWidth desired rect) pairs
     wall = vertical ' ' rects'
-    result = foldl' (<>) mempty . List.intersperse wall $ rects'
+    result = foldl' (<>) mempty . intersperse wall $ rects'
   in
     foldl' (<>) emptyRope (List.intersperse "\n" (rowsFrom result))
 
