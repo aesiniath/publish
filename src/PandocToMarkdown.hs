@@ -157,12 +157,19 @@ tableToMarkdown
     -> [[TableCell]]
     -> Rope
 tableToMarkdown caption alignments sizes headers rows =
-    header
+    header <> "\n"
+    <> underlineHeaders <> "\n"
   where
     header = buildRow blockSizes (headerToMarkdown headers)
 
     headerToMarkdown :: [TableCell] -> [Rectangle]
     headerToMarkdown = fmap convertHeaderToRectangle . headerSizes blockSizes 
+
+    underlineHeaders :: Rope
+    underlineHeaders =
+        foldl' (<>) emptyRope . intersperse " "
+        . fmap (\size -> intoRope (replicate size '-'))
+        . take (length headers) $ blockSizes
 
     convertHeaderToRectangle :: (Int,Block) -> Rectangle
     convertHeaderToRectangle (size,Plain inlines) =
@@ -252,7 +259,7 @@ buildRow cellWidths rects =
     wall = vertical ' ' rects'
     result = foldl' (<>) mempty . intersperse wall $ rects'
   in
-    foldl' (<>) emptyRope (List.intersperse "\n" (rowsFrom result))
+    foldl' (<>) emptyRope (intersperse "\n" (rowsFrom result))
 
 vertical :: Char -> [Rectangle] -> Rectangle
 vertical ch rects =

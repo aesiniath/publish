@@ -114,11 +114,8 @@ checkTableProperties = do
                 []
           in do
             result `shouldBe` [quote|
------------------------------------------------
 First           Second          Third          
 --------------- --------------- ---------------
-123456789012345
------------------------------------------------
             |]
 
         it "a minimal complete example reformats properly" $
