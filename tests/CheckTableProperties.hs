@@ -114,8 +114,10 @@ checkTableProperties = do
                 []
           in do
             result `shouldBe` [quote|
+-----------------------------------------------
 First           Second          Third          
 --------------- --------------- ---------------
+-----------------------------------------------
             |]
 
         it "a minimal complete example reformats properly" $
@@ -130,7 +132,7 @@ First           Second          Third
             let result = pandocToMarkdown doc
             result `shouldBe` [quote|
 -----------------------------------------------
-First           Second          Third          
+          First     Second      Third          
 --------------- --------------- ---------------
               1        2        3              
 -----------------------------------------------

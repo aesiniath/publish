@@ -157,10 +157,15 @@ tableToMarkdown
     -> [[TableCell]]
     -> Rope
 tableToMarkdown caption alignments sizes headers rows =
-    header <> "\n"
+    wrapperLine <> "\n"
+    <> header <> "\n"
     <> underlineHeaders <> "\n"
+    <> wrapperLine <> "\n"
   where
     header = buildRow blockSizes (headerToMarkdown headers)
+
+    overall = sum blockSizes + (length headers) - 1
+    wrapperLine = intoRope (replicate overall '-')
 
     headerToMarkdown :: [TableCell] -> [Rectangle]
     headerToMarkdown = fmap convertHeaderToRectangle . headerSizes blockSizes 
@@ -182,7 +187,7 @@ tableToMarkdown caption alignments sizes headers rows =
     headerSizes sizes headers = zipWith (\size (block:_) -> (size,block)) sizes headers
 
     blockSizes :: [Int]
-    blockSizes = repeat 15 -- FIXME
+    blockSizes = take (length headers) (repeat 15) -- FIXME
 
 
 data NotSafe = NotSafe String
