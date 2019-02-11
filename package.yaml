@@ -26,6 +26,7 @@ dependencies:
  - base >= 4.11 && < 5
  - bytestring
  - chronologique
+ - deepseq
  - directory
  - filepath
  - hinotify
