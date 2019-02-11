@@ -160,14 +160,14 @@ tableToMarkdown caption alignments relatives headers rows =
     wrapperLine <> "\n"
     <> header <> "\n"
     <> underlineHeaders <> "\n"
-    <> body
+    <> body <> "\n"
     <> wrapperLine <> "\n"
   where
     header = rowToMarkdown headers
 
     bodylines = fmap rowToMarkdown rows
 
-    body = foldl' (\acc text -> acc <> text <> "\n") emptyRope bodylines
+    body = mconcat (intersperse "\n\n" bodylines)
 
     sizes :: [Int]
     sizes = take (length headers) (repeat 15) -- FIXME
