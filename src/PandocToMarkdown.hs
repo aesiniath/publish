@@ -53,7 +53,7 @@ convertBlock margin block =
     BulletList blockss -> bulletlistToMarkdown margin blockss
     OrderedList attrs blockss -> orderedlistToMarkdown margin attrs blockss
     HorizontalRule -> "---\n"
-    Table caption alignments sizes headers rows -> tableToMarkdown caption alignments sizes headers rows
+    Table caption alignments relatives headers rows -> tableToMarkdown caption alignments relatives headers rows
     _ -> error msg
 
 plaintextToMarkdown :: Int -> [Inline] -> Rope
@@ -156,50 +156,39 @@ tableToMarkdown
     -> [TableCell]
     -> [[TableCell]]
     -> Rope
-tableToMarkdown caption alignments sizes headers rows =
+tableToMarkdown caption alignments relatives headers rows =
     wrapperLine <> "\n"
     <> header <> "\n"
     <> underlineHeaders <> "\n"
-    <> (foldl' (<>) emptyRope bodylines)
+    <> foldl' (<>) emptyRope bodylines
     <> "\n"
     <> wrapperLine <> "\n"
   where
-    header = buildRow blockSizes (headerToMarkdown headers)
+    header = (buildRow sizes . rowToMarkdown) headers
 
-    bodylines = fmap (buildRow blockSizes . rowToMarkdown) rows
+    bodylines = fmap (buildRow sizes . rowToMarkdown) rows
 
-    blockSizes :: [Int]
-    blockSizes = take (length headers) (repeat 15) -- FIXME
+    sizes :: [Int]
+    sizes = take (length headers) (repeat 15) -- FIXME
 
-    overall = sum blockSizes + (length headers) - 1
+    overall = sum sizes + (length headers) - 1
     wrapperLine = intoRope (replicate overall '-')
 
-    headerToMarkdown :: [TableCell] -> [Rectangle]
-    headerToMarkdown = fmap convertHeaderToRectangle . zipWith3
-        (\size align (block:_) -> (size,align,block)) blockSizes alignments
+    rowToMarkdown :: [TableCell] -> [Rectangle]
+    rowToMarkdown = fmap convert . zipWith3
+        (\size align (block:_) -> (size,align,block)) sizes alignments
 
     underlineHeaders :: Rope
     underlineHeaders =
         foldl' (<>) emptyRope . intersperse " "
         . fmap (\size -> intoRope (replicate size '-'))
-        . take (length headers) $ blockSizes
+        . take (length headers) $ sizes
 
-    convertHeaderToRectangle :: (Int,Alignment,Block) -> Rectangle
-    convertHeaderToRectangle (size,align,Plain inlines) =
+    convert :: (Int,Alignment,Block) -> Rectangle
+    convert (size,align,Plain inlines) =
         rectanglerize size align (plaintextToMarkdown size inlines)
-    convertHeaderToRectangle (size,_,_) =
+    convert (size,_,_) =
         impureThrow (NotSafe "Incorrect Block type encountered")
-
-
-    rowToMarkdown :: [TableCell] -> [Rectangle]
-    rowToMarkdown = fmap convertRowToRectangle . zipWith3
-        (\size align (block:_) -> (size,align,block)) blockSizes alignments
-
-    convertRowToRectangle :: (Int,Alignment,Block) -> Rectangle
-    convertRowToRectangle (size,align,Plain inlines) =
-        rectanglerize size align (plaintextToMarkdown size inlines)
-    convertRowToRectangle (size,_,_) =
-        impureThrow (NotSafe "Unexpected Block type encountered")
 
 
 
