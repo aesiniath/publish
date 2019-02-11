@@ -160,15 +160,23 @@ tableToMarkdown caption alignments sizes headers rows =
     wrapperLine <> "\n"
     <> header <> "\n"
     <> underlineHeaders <> "\n"
+    <> (foldl' (<>) emptyRope bodylines)
+    <> "\n"
     <> wrapperLine <> "\n"
   where
     header = buildRow blockSizes (headerToMarkdown headers)
+
+    bodylines = fmap (buildRow blockSizes . rowToMarkdown) rows
+
+    blockSizes :: [Int]
+    blockSizes = take (length headers) (repeat 15) -- FIXME
 
     overall = sum blockSizes + (length headers) - 1
     wrapperLine = intoRope (replicate overall '-')
 
     headerToMarkdown :: [TableCell] -> [Rectangle]
-    headerToMarkdown = fmap convertHeaderToRectangle . headerSizes blockSizes 
+    headerToMarkdown = fmap convertHeaderToRectangle . zipWith3
+        (\size align (block:_) -> (size,align,block)) blockSizes alignments
 
     underlineHeaders :: Rope
     underlineHeaders =
@@ -182,13 +190,17 @@ tableToMarkdown caption alignments sizes headers rows =
     convertHeaderToRectangle (size,_,_) =
         impureThrow (NotSafe "Incorrect Block type encountered")
 
-    -- FIXME single block only, else throw exception
-    headerSizes :: [Int] -> [[Block]] -> [(Int,Alignment,Block)]
-    headerSizes sizes headers =
-        zipWith3 (\size align (block:_) -> (size,align,block)) sizes alignments headers
 
-    blockSizes :: [Int]
-    blockSizes = take (length headers) (repeat 15) -- FIXME
+    rowToMarkdown :: [TableCell] -> [Rectangle]
+    rowToMarkdown = fmap convertRowToRectangle . zipWith3
+        (\size align (block:_) -> (size,align,block)) blockSizes alignments
+
+    convertRowToRectangle :: (Int,Alignment,Block) -> Rectangle
+    convertRowToRectangle (size,align,Plain inlines) =
+        rectanglerize size align (plaintextToMarkdown size inlines)
+    convertRowToRectangle (size,_,_) =
+        impureThrow (NotSafe "Unexpected Block type encountered")
+
 
 
 data NotSafe = NotSafe String
@@ -225,14 +237,10 @@ rectanglerize size align text =
                 (left,remain) = divMod padding 2
                 right = left + remain
               in case align of
-                AlignCenter ->
-                    intoRope (replicate left ' ') <> l <> intoRope (replicate right ' ')
-                AlignRight ->
-                    intoRope (replicate padding ' ') <> l
-                AlignLeft ->
-                    l <> intoRope (replicate padding ' ')
-                AlignDefault ->
-                    l <> intoRope (replicate padding ' ')
+                AlignCenter  -> intoRope (replicate left ' ') <> l <> intoRope (replicate right ' ')
+                AlignRight   -> intoRope (replicate padding ' ') <> l
+                AlignLeft    -> l <> intoRope (replicate padding ' ')
+                AlignDefault -> l <> intoRope (replicate padding ' ')
           | width l == size = case align of
                 AlignRight -> impureThrow (NotSafe "Column width insufficient to show alignment")
                 _ -> l
