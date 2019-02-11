@@ -160,13 +160,14 @@ tableToMarkdown caption alignments relatives headers rows =
     wrapperLine <> "\n"
     <> header <> "\n"
     <> underlineHeaders <> "\n"
-    <> foldl' (<>) emptyRope bodylines
-    <> "\n"
+    <> body
     <> wrapperLine <> "\n"
   where
-    header = (buildRow sizes . rowToMarkdown) headers
+    header = rowToMarkdown headers
 
-    bodylines = fmap (buildRow sizes . rowToMarkdown) rows
+    bodylines = fmap rowToMarkdown rows
+
+    body = foldl' (\acc text -> acc <> text <> "\n") emptyRope bodylines
 
     sizes :: [Int]
     sizes = take (length headers) (repeat 15) -- FIXME
@@ -174,8 +175,8 @@ tableToMarkdown caption alignments relatives headers rows =
     overall = sum sizes + (length headers) - 1
     wrapperLine = intoRope (replicate overall '-')
 
-    rowToMarkdown :: [TableCell] -> [Rectangle]
-    rowToMarkdown = fmap convert . zipWith3
+    rowToMarkdown :: [TableCell] -> Rope
+    rowToMarkdown = buildRow sizes . fmap convert . zipWith3
         (\size align (block:_) -> (size,align,block)) sizes alignments
 
     underlineHeaders :: Rope
