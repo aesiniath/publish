@@ -157,11 +157,13 @@ tableToMarkdown
     -> [[TableCell]]
     -> Rope
 tableToMarkdown caption alignments relatives headers rows =
-    wrapperLine <> "\n"
-    <> header <> "\n"
-    <> underlineHeaders <> "\n"
-    <> body <> "\n"
-    <> wrapperLine <> "\n"
+    mconcat (intersperse "\n"
+        [ wrapperLine
+        , header
+        , underlineHeaders
+        , body
+        , wrapperLine
+        ]) <> "\n"
   where
     header = rowToMarkdown headers
 
