@@ -176,15 +176,16 @@ tableToMarkdown caption alignments sizes headers rows =
         . fmap (\size -> intoRope (replicate size '-'))
         . take (length headers) $ blockSizes
 
-    convertHeaderToRectangle :: (Int,Block) -> Rectangle
-    convertHeaderToRectangle (size,Plain inlines) =
-        rectanglerize size (plaintextToMarkdown size inlines)
-    convertHeaderToRectangle (size,_) =
+    convertHeaderToRectangle :: (Int,Alignment,Block) -> Rectangle
+    convertHeaderToRectangle (size,align,Plain inlines) =
+        rectanglerize size align (plaintextToMarkdown size inlines)
+    convertHeaderToRectangle (size,_,_) =
         impureThrow (NotSafe "Incorrect Block type encountered")
 
     -- FIXME single block only, else throw exception
-    headerSizes :: [Int] -> [[Block]] -> [(Int,Block)]
-    headerSizes sizes headers = zipWith (\size (block:_) -> (size,block)) sizes headers
+    headerSizes :: [Int] -> [[Block]] -> [(Int,Alignment,Block)]
+    headerSizes sizes headers =
+        zipWith3 (\size align (block:_) -> (size,align,block)) sizes alignments headers
 
     blockSizes :: [Int]
     blockSizes = take (length headers) (repeat 15) -- FIXME
@@ -213,13 +214,28 @@ instance Semigroup Rectangle where
 instance Monoid Rectangle where
     mempty = Rectangle 0 0 []
 
-rectanglerize :: Int -> Rope -> Rectangle
-rectanglerize size text =
+rectanglerize :: Int -> Alignment -> Rope -> Rectangle
+rectanglerize size align text =
   let
     ls = breakLines (wrap size text)
 
-    fix l | width l <  size = l <> intoRope (replicate (size - width l) ' ')
-          | width l == size = l
+    fix l | width l <  size =
+              let
+                padding = size - width l
+                (left,remain) = divMod padding 2
+                right = left + remain
+              in case align of
+                AlignCenter ->
+                    intoRope (replicate left ' ') <> l <> intoRope (replicate right ' ')
+                AlignRight ->
+                    intoRope (replicate padding ' ') <> l
+                AlignLeft ->
+                    l <> intoRope (replicate padding ' ')
+                AlignDefault ->
+                    l <> intoRope (replicate padding ' ')
+          | width l == size = case align of
+                AlignRight -> impureThrow (NotSafe "Column width insufficient to show alignment")
+                _ -> l
           | otherwise       = impureThrow (NotSafe "Line wider than permitted size")
 
     result = foldr (\l text -> fix l:text) [] ls
@@ -252,7 +268,7 @@ combineRectangles rect1@(Rectangle size1 height1 texts1) rect2@(Rectangle size2 
 ensureWidth :: Int -> Rectangle -> Rectangle
 ensureWidth request rect@(Rectangle size height texts) =
     if widthOf rect < request
-        then rectanglerize request (foldl' (<>) emptyRope texts)
+        then rectanglerize request AlignLeft (foldl' (<>) emptyRope texts)
         else rect
 
 

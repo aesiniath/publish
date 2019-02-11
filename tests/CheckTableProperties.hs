@@ -26,18 +26,18 @@ checkTableProperties :: Spec
 checkTableProperties = do
     describe "Table rendering code" $ do
         it "Making wrapped text into rectangles" $
-            rectanglerize 6 "First Name" `shouldBe` Rectangle 6 2
+            rectanglerize 6 AlignLeft "First Name" `shouldBe` Rectangle 6 2
                 [ "First "
                 , "Name  "
                 ]
 
         it "Rectanglerizing a block with too long lines should throw" $
-            (evaluate . force) (rectanglerize 7 "Borough of Kensington") `shouldThrow` notsafe
+            (evaluate . force) (rectanglerize 7 AlignLeft "Borough of Kensington") `shouldThrow` notsafe
 
         it "Two rectangles of equal size combine" $
           let
-            rect1 = rectanglerize 8 "This is a test"
-            rect2 = rectanglerize 8 "Ode to Joy"
+            rect1 = rectanglerize 8 AlignLeft "This is a test"
+            rect2 = rectanglerize 8 AlignLeft "Ode to Joy"
             result = combineRectangles rect1 rect2
           in do
             heightOf rect1 `shouldBe` 2
@@ -51,8 +51,8 @@ checkTableProperties = do
         it "Two rectangles of unequal size combine (1)" $
           let
             --                        1234567890
-            rect1 = rectanglerize 10 "Emergency Broadcast System"
-            rect2 = rectanglerize 10 "Ode to Joy is nice"
+            rect1 = rectanglerize 10 AlignLeft "Emergency Broadcast System"
+            rect2 = rectanglerize 10 AlignLeft "Ode to Joy is nice"
             result = combineRectangles rect1 rect2
           in do
             heightOf rect1 `shouldBe` 3
@@ -67,8 +67,8 @@ checkTableProperties = do
         it "Two rectangles of unequal size combine (2)" $
           let
             --                        1234567890
-            rect3 = rectanglerize 10 "This is an emergency"
-            rect4 = rectanglerize 10 "Ode to Joy is nice piece that lots play"
+            rect3 = rectanglerize 10 AlignLeft "This is an emergency"
+            rect4 = rectanglerize 10 AlignLeft "Ode to Joy is nice piece that lots play"
             result = combineRectangles rect3 rect4
           in do
             heightOf rect3 `shouldBe` 2
@@ -136,4 +136,5 @@ First           Second          Third
 --------------- --------------- ---------------
               1        2        3              
 -----------------------------------------------
+
             |]
