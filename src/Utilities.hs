@@ -16,7 +16,7 @@ import Core.Program
 import Core.System
 import Core.Text
 import qualified Data.List as List (intercalate)
-import System.Directory (doesDirectoryExist, doesFileExist, createDirectory
+import System.Directory (doesDirectoryExist, doesFileExist, createDirectoryIfMissing
     , getModificationTime)
 import System.Exit (ExitCode(..))
 import System.FilePath.Posix (takeDirectory)
@@ -33,7 +33,7 @@ ensureDirectory target =
   in liftIO $ do
     probe <- doesDirectoryExist subdir
     when (not probe) $ do
-        createDirectory subdir
+        createDirectoryIfMissing True subdir
 
 {-
 Thin wrapper around **typed-process**'s `readProcess` so that the command
