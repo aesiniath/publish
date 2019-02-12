@@ -26,6 +26,7 @@ dependencies:
  - base >= 4.11 && < 5
  - bytestring
  - chronologique
+ - deepseq
  - directory
  - filepath
  - hinotify
@@ -34,7 +35,7 @@ dependencies:
  - template-haskell
  - text
  - typed-process
- - unbeliever >= 0.8.1
+ - unbeliever >= 0.8.3
  - unix
  - unordered-containers
 
@@ -81,6 +82,7 @@ tests:
      - tests
     main: TestSuite.hs
     other-modules:
+     - CheckTableProperties
      - CompareFragments
      - FormatDocument
      - PandocToMarkdown

@@ -12,8 +12,8 @@ main = execute $ do
     setVerbosityLevel Debug
 
     event "Load fragment"
-    doc <- loadFragment "examples/Fragment.markdown"
-    writeS doc
+    doc <- loadFragment "tests/fragments/MultilineTable.markdown"
+    debugS "doc" doc
 
     event "Convert..."
     let text = pandocToMarkdown doc

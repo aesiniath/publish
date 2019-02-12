@@ -2,7 +2,10 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module CompareFragments where
+module CompareFragments
+    ( checkByComparingFragments
+    )
+where
 
 import Core.Text
 import qualified Data.Text.IO as T
@@ -21,6 +24,7 @@ fragments =
     , ("blockquotes",   "tests/fragments/Blockquotes.markdown")
     , ("bulletlist",    "tests/fragments/BulletList.markdown")
     , ("orderedlist",   "tests/fragments/OrderedList.markdown")
+    , ("multiline table", "tests/fragments/MultilineTable.markdown")
     ]
 
 checkByComparingFragments :: Spec

@@ -13,13 +13,13 @@ We also have more complex bullet lists:
 
  -  This is the fifth item;
 
- -  This is the sixth item, which has lots of words about current events
-    and learned discussion about whether the stock market will go up or
-    down depending on whether the `launchTheMissiles()` function gets
-    called today or tomorrow; and
+ -  This is the sixth item, which has lots of words about current events and
+    learned discussion about whether the stock market will go up or down
+    depending on whether the `launchTheMissiles()` function gets called today
+    or tomorrow; and
 
- -  Finally, a 7th item. Wasn't there a book about Seven Signs? Maybe it
-    was _Seven Samurai_.
+ -  Finally, a 7th item. Wasn't there a book about Seven Signs? Maybe it was a
+    movie, _Seven Samurai_.
 
 And we're done.
 
