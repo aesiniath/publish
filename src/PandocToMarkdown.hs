@@ -28,7 +28,7 @@ import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
     , ListAttributes, Alignment(..), TableCell)
 import Text.Pandoc.Shared (orderedListMarkers)
 
-__WIDTH__ = 75 :: Int
+__WIDTH__ = 78 :: Int
 
 pandocToMarkdown :: Pandoc -> Rope
 pandocToMarkdown (Pandoc _ blocks) =
@@ -177,9 +177,14 @@ tableToMarkdown caption alignments relatives headers rows =
     sizes =
       let
         total = fromIntegral __WIDTH__
-        f = fromIntegral . floor . (*) total
+
+        -- there's a weird thing where sometimes (in pipe tables?) the
+        -- value of relative is 0. If that happens, pick a value.
+        -- TODO Better heuristic? Because, this will break if cell too wide.
+        f x | x == 0.0  = 14
+            | otherwise = floor (total * x)
       in
-        fmap f relatives
+        fmap (fromIntegral . f) relatives
 
     overall = sum sizes + (length headers) - 1
     wrapperLine = intoRope (replicate overall '-')
