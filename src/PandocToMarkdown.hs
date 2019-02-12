@@ -172,7 +172,12 @@ tableToMarkdown caption alignments relatives headers rows =
     body = mconcat (intersperse "\n\n" bodylines)
 
     sizes :: [Int]
-    sizes = take (length headers) (repeat 15) -- FIXME
+    sizes =
+      let
+        total = 78
+        f = fromIntegral . floor . (*) total
+      in
+        fmap f relatives
 
     overall = sum sizes + (length headers) - 1
     wrapperLine = intoRope (replicate overall '-')
