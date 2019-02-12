@@ -14,10 +14,9 @@ import Test.Hspec
 
 import FormatDocument (markdownToPandoc)
 import PandocToMarkdown (NotSafe, Rectangle(..), rectanglerize
-    , combineRectangles, buildRow, pandocToMarkdown, widthOf, heightOf
+    , combineRectangles, buildRow, pandocToMarkdown, heightOf
     , tableToMarkdown)
-import Text.Pandoc (Block(..), Inline(..)
-    , Alignment(..), TableCell)
+import Text.Pandoc (Block(..), Inline(..), Alignment(..))
 
 notsafe :: Selector NotSafe
 notsafe = const True

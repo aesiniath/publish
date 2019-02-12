@@ -28,7 +28,8 @@ import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
     , ListAttributes, Alignment(..), TableCell)
 import Text.Pandoc.Shared (orderedListMarkers)
 
-__WIDTH__ = 78 :: Int
+__WIDTH__ :: Int
+__WIDTH__ = 78
 
 pandocToMarkdown :: Pandoc -> Rope
 pandocToMarkdown (Pandoc _ blocks) =
@@ -147,10 +148,6 @@ listToMarkdown markers margin items =
         else (False,text <> "    " <> line <> "\n")
 
 
--- Assumtions:
--- 1. all the lists are the same length
--- 2. headers widths will be in increments of 5 characters?
--- 3. no complex tables
 tableToMarkdown
     :: [Inline]
     -> [Alignment]
@@ -184,7 +181,7 @@ tableToMarkdown caption alignments relatives headers rows =
         f x | x == 0.0  = 14
             | otherwise = floor (total * x)
       in
-        fmap (fromIntegral . f) relatives
+        fmap (fromInteger . f) relatives
 
     overall = sum sizes + (length headers) - 1
     wrapperLine = intoRope (replicate overall '-')
@@ -202,7 +199,7 @@ tableToMarkdown caption alignments relatives headers rows =
     convert :: (Int,Alignment,Block) -> Rectangle
     convert (size,align,Plain inlines) =
         rectanglerize size align (plaintextToMarkdown size inlines)
-    convert (size,_,_) =
+    convert (_,_,_) =
         impureThrow (NotSafe "Incorrect Block type encountered")
 
 
@@ -250,12 +247,12 @@ rectanglerize size align text =
                 _ -> l
           | otherwise       = impureThrow (NotSafe "Line wider than permitted size")
 
-    result = foldr (\l text -> fix l:text) [] ls
+    result = foldr (\l acc -> fix l:acc) [] ls
   in
     Rectangle size (length result) result
 
 combineRectangles :: Rectangle -> Rectangle -> Rectangle
-combineRectangles rect1@(Rectangle size1 height1 texts1) rect2@(Rectangle size2 height2 texts2) =
+combineRectangles rect1@(Rectangle size1 height1 _) rect2@(Rectangle size2 height2 _) =
   let
     target = max height1 height2
     extra1 = target - height1
@@ -278,9 +275,9 @@ combineRectangles rect1@(Rectangle size1 height1 texts1) rect2@(Rectangle size2 
     Rectangle (size1 + size2) target  result
 
 ensureWidth :: Int -> Rectangle -> Rectangle
-ensureWidth request rect@(Rectangle size height texts) =
+ensureWidth request rect =
     if widthOf rect < request
-        then rectanglerize request AlignLeft (foldl' (<>) emptyRope texts)
+        then rectanglerize request AlignLeft (foldl' (<>) emptyRope (rowsFrom rect))
         else rect
 
 
