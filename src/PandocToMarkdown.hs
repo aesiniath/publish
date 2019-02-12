@@ -28,13 +28,15 @@ import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
     , ListAttributes, Alignment(..), TableCell)
 import Text.Pandoc.Shared (orderedListMarkers)
 
+__WIDTH__ = 75 :: Int
+
 pandocToMarkdown :: Pandoc -> Rope
 pandocToMarkdown (Pandoc _ blocks) =
     blocksToMarkdown blocks
 
 blocksToMarkdown :: [Block] -> Rope
 blocksToMarkdown blocks =
-    foldl' (\text block -> text <> (convertBlock 75 block) <> "\n") emptyRope blocks
+    foldl' (\text block -> text <> (convertBlock __WIDTH__ block) <> "\n") emptyRope blocks
 
 convertBlock :: Int -> Block -> Rope
 convertBlock margin block =
@@ -174,7 +176,7 @@ tableToMarkdown caption alignments relatives headers rows =
     sizes :: [Int]
     sizes =
       let
-        total = 78
+        total = fromIntegral __WIDTH__
         f = fromIntegral . floor . (*) total
       in
         fmap f relatives
