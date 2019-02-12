@@ -3,15 +3,23 @@
 
 module FormatDocument
     ( program
+    , loadFragment
+    , markdownToPandoc
     )
 where
 
 import Core.Program
 import Core.System
+import Core.Text
+
+import qualified Data.Text as T (Text)
 import qualified Data.Text.IO as T
-import Text.Pandoc (runIOorExplode, readMarkdown, writeMarkdown, def
-    , readerExtensions, pandocExtensions, writerExtensions, writerColumns
-    , writerSetextHeaders, writerWrapText, WrapOption(WrapAuto), Pandoc)
+import System.IO (withFile, IOMode(..))
+import Text.Pandoc (runIOorExplode, readMarkdown, def
+    , readerExtensions, pandocExtensions, disableExtension, Extension(..)
+    , Pandoc)
+
+import PandocToMarkdown
 
 program :: Program None ()
 program = do
@@ -36,29 +44,32 @@ getFragmentName = do
 
 loadFragment :: FilePath -> Program None Pandoc
 loadFragment file =
-  let
-    readingOptions = def
-        { readerExtensions = pandocExtensions
-        }
-  in
     liftIO $ do
         contents <- T.readFile file
-        runIOorExplode $ do
-            readMarkdown readingOptions contents
+        markdownToPandoc contents
+
+--
+-- Unlike the render use case, here we suppress certain
+-- options which mess up the ASCII form of the source documents
+--
+markdownToPandoc :: T.Text -> IO Pandoc
+markdownToPandoc contents =
+  let
+    extensions = disableExtension Ext_smart pandocExtensions
+    readingOptions = def
+        { readerExtensions = extensions
+        }
+  in do
+    runIOorExplode $ do
+        readMarkdown readingOptions contents
 
 writeResult :: FilePath -> Pandoc -> Program None ()
 writeResult file doc =
   let
     result = file ++ "-tmp"
-    writingOptions = def
-        { writerExtensions = pandocExtensions
-        , writerWrapText = WrapAuto
-        , writerColumns = 75
-        , writerSetextHeaders = True
-        }
+    contents' = pandocToMarkdown doc
   in
     liftIO $ do
-        contents' <- runIOorExplode $ do
-            writeMarkdown writingOptions doc
-        T.writeFile result contents'
+        withFile result WriteMode $ \handle ->
+            hWrite handle contents'
 

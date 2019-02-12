@@ -26,8 +26,8 @@ import System.Posix.Directory (changeWorkingDirectory)
 import System.Posix.Temp (mkdtemp)
 import System.Posix.User (getEffectiveUserID, getEffectiveGroupID)
 import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
-    , readerExtensions, pandocExtensions, writerTopLevelDivision
-    , TopLevelDivision(TopLevelChapter))
+    , readerExtensions, readerColumns, pandocExtensions
+    , writerTopLevelDivision, TopLevelDivision(TopLevelChapter))
 
 import Environment (Env(..))
 import NotifyChanges (waitForChange)
@@ -224,9 +224,14 @@ files. So gratuitously add a break.
 convertMarkdown :: FilePath -> Program Env ()
 convertMarkdown file =
   let
-    readingOptions = def { readerExtensions = pandocExtensions }
+    readingOptions = def
+        { readerExtensions = pandocExtensions
+        , readerColumns = 75
+        }
 
-    writingOptions = def { writerTopLevelDivision = TopLevelChapter }
+    writingOptions = def
+        { writerTopLevelDivision = TopLevelChapter
+        }
 
   in do
     env <- getApplicationState

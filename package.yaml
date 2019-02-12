@@ -1,5 +1,5 @@
 name: publish
-version:  0.3.2
+version:  0.4.0
 synopsis: Publishing tools for papers, books, and presentations
 description: |
   Tools for rendering markdown-centric documents into PDFs.
@@ -26,6 +26,7 @@ dependencies:
  - base >= 4.11 && < 5
  - bytestring
  - chronologique
+ - deepseq
  - directory
  - filepath
  - hinotify
@@ -34,7 +35,7 @@ dependencies:
  - template-haskell
  - text
  - typed-process
- - unbeliever >= 0.8.0
+ - unbeliever >= 0.8.3
  - unix
  - unordered-containers
 
@@ -45,12 +46,12 @@ executables:
     source-dirs: src
     main: RenderMain.hs
     other-modules:
-     - RenderDocument
      - Environment
      - LatexPreamble
      - NotifyChanges
      - OutputParser
-     - Paths_publish
+     - PandocToMarkdown
+     - RenderDocument
      - Utilities
 
   format:
@@ -58,3 +59,32 @@ executables:
     main: FormatMain.hs
     other-modules:
      - FormatDocument
+     - PandocToMarkdown
+
+tests:
+  experiment:
+    dependencies:
+     - unbeliever
+    source-dirs:
+     - tests
+     - src
+    main: ReformatTest.hs
+    other-modules:
+     - FormatDocument
+     - PandocToMarkdown
+
+  check:
+    dependencies:
+     - hspec
+    ghc-options: -threaded
+    source-dirs:
+     - src
+     - tests
+    main: TestSuite.hs
+    other-modules:
+     - CheckTableProperties
+     - CompareFragments
+     - FormatDocument
+     - PandocToMarkdown
+
+

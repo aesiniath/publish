@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set -x
-
 ROOTDIR=`stack path --local-install-root`
 DISTDIR=`stack path --dist-dir`
 
@@ -34,4 +32,5 @@ t () {
 # main
 e render
 e format
-
+t experiment
+t check
