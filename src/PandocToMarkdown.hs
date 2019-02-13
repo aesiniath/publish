@@ -108,14 +108,14 @@ quoteToMarkdown margin blocks =
     rows = breakLines . convertBlock (margin - 2)
 
 bulletlistToMarkdown :: Int -> [[Block]] -> Rope
-bulletlistToMarkdown = listToMarkdown (repeat " -  ")
+bulletlistToMarkdown = listToMarkdown (repeat "-   ")
 
 orderedlistToMarkdown :: Int -> ListAttributes -> [[Block]] -> Rope
 orderedlistToMarkdown margin (num,style,delim) blockss =
-  let
-    intoMarkers = fmap (\text -> " " <> text <> " ") . fmap intoRope . orderedListMarkers
-  in
     listToMarkdown (intoMarkers (num,style,delim)) margin blockss
+  where
+    intoMarkers = fmap pad . fmap intoRope . orderedListMarkers
+    pad text = text <> if width text > 2 then " " else "  "
 
 listToMarkdown :: [Rope] -> Int -> [[Block]] -> Rope
 listToMarkdown markers margin items =
