@@ -200,7 +200,9 @@ processFragment file = do
     -- Read the fragment, process it if Markdown then run it out to LaTeX.
     case takeExtension file of
         ".markdown" -> convertMarkdown file
+        ".md"       -> convertMarkdown file
         ".latex"    -> passthroughLaTeX file
+        ".tex"      -> passthroughLaTeX file
         ".svg"      -> convertImage file
         _           -> passthroughImage file
 
