@@ -28,6 +28,11 @@ main = do
             Watch all sources listed in the bookfile and re-run the
             rendering engine if changes are detected.
           |]
+        , Option "temp" Nothing (Value "TMPDIR") [quote|
+            The working location for assembling converted fragments and
+            caching intermediate results between runs. By default, a
+            temporary directory will be created in /tmp.
+          |]
         , Option "docker" Nothing (Value "IMAGE") [quote|
             Run the specified Docker image in a container, mount the target
             directory into it as a volume, and do the build there. This allows
