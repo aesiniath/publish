@@ -155,7 +155,7 @@ tableToMarkdown
     -> [TableCell]
     -> [[TableCell]]
     -> Rope
-tableToMarkdown caption alignments relatives headers rows =
+tableToMarkdown _ alignments relatives headers rows =
     mconcat (intersperse "\n"
         [ wrapperLine
         , header
