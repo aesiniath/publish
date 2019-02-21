@@ -122,26 +122,32 @@ setupTargetFile book = do
     let start = startingDirectoryFrom env
     let dotfile = start ++ "/.target"
 
-    tmpdir <- liftIO $ catch
-        (do
-            dir' <- readFile dotfile
-            let dir = trim dir'
-            probe <- doesDirectoryExist dir
-            if probe
-                then return dir
-                else throw boom
-        )
-        (\(_ :: IOError) -> do
-            dir <- mkdtemp "/tmp/publish-"
-            writeFile dotfile (dir ++ "\n")
-            return dir
-        )
+    params <- getCommandLine
+    tmpdir <- case lookupOptionValue "temp" params of
+            Just dir -> do
+                -- Append a slash so that /tmp/booga is taken as a directory.
+                -- Otherwise, you end up ensuring /tmp exists.
+                ensureDirectory (dir ++ "/")
+                return dir
+            Nothing -> liftIO $ catch
+                (do
+                    dir' <- readFile dotfile
+                    let dir = trim dir'
+                    probe <- doesDirectoryExist dir
+                    if probe
+                        then return dir
+                        else throw boom
+                )
+                (\ (_ :: IOError) -> do
+                    dir <- mkdtemp "/tmp/publish-"
+                    writeFile dotfile (dir ++ "\n")
+                    return dir
+                )
     debugS "tmpdir" tmpdir
 
     let master = tmpdir ++ "/" ++ base ++ ".tex"
         result = tmpdir ++ "/" ++ base ++ ".pdf"
 
-    params <- getCommandLine
     first <- case lookupOptionFlag "builtin-preamble" params of
         Nothing     -> return []
         Just True   -> do
