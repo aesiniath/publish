@@ -315,9 +315,12 @@ convertInline inline =
     Emph inlines -> "_" <> inlinesToMarkdown inlines <> "_"
     Strong inlines -> "**" <> inlinesToMarkdown inlines <> "**"
     SoftBreak -> " "
+    LineBreak -> "-~<{BR}>~-" -- FIXME
     Image _ inlines (url, _) -> imageToMarkdown inlines url
     Code _ string -> "`" <> intoRope string <> "`"
     RawInline (Format "tex") string -> intoRope string
+    Link ("",["uri"],[]) _ (url, _) -> uriToMarkdown url
+    Link _ inlines (url, _) -> linkToMarkdown inlines url
     _ -> error msg
 
 imageToMarkdown :: [Inline] -> String -> Rope
@@ -328,3 +331,18 @@ imageToMarkdown inlines url =
   in
     "![" <> text <> "](" <> target <> ")"
     
+uriToMarkdown :: String -> Rope
+uriToMarkdown url =
+  let
+    target = intoRope url
+  in
+    "<" <> target <> ">"
+
+linkToMarkdown :: [Inline] -> String -> Rope
+linkToMarkdown inlines url =
+  let
+    text = inlinesToMarkdown inlines
+    target = intoRope url
+  in
+    "[" <> text <> "](" <> target <> ")"
+
