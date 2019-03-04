@@ -63,10 +63,22 @@ plaintextToMarkdown :: Int -> [Inline] -> Rope
 plaintextToMarkdown margin inlines =
     wrap margin (inlinesToMarkdown inlines)
 
-
+{-
+Everything was great until we had to figure out how to deal with line
+breaks aka <BR>, represented in Markdown by [' ',' ']. We do this by
+replacing the line break Inline with \x2028. This character, U+2028 LS, is
+the Line Separator character. It's one of those symbols up in General
+Punctuation that no one ever uses. So we use it as a sentinel internally
+here; first we break on those, and then we wrap the results.
+-}
 paragraphToMarkdown :: Int -> [Inline] -> Rope
 paragraphToMarkdown margin inlines =
-    wrap margin (inlinesToMarkdown inlines) <> "\n"
+    wrap' (inlinesToMarkdown inlines) <> "\n"
+  where
+    wrap' :: Rope -> Rope
+    wrap' = mconcat . intersperse "  \n" . fmap (wrap margin) . breakPieces isLineSeparator
+
+    isLineSeparator = (== '\x2028')
 
 headingToMarkdown :: Int -> [Inline] -> Rope
 headingToMarkdown level inlines =
@@ -315,7 +327,7 @@ convertInline inline =
     Emph inlines -> "_" <> inlinesToMarkdown inlines <> "_"
     Strong inlines -> "**" <> inlinesToMarkdown inlines <> "**"
     SoftBreak -> " "
-    LineBreak -> "-~<{BR}>~-" -- FIXME
+    LineBreak -> "\x2028"
     Image _ inlines (url, _) -> imageToMarkdown inlines url
     Code _ string -> "`" <> intoRope string <> "`"
     RawInline (Format "tex") string -> intoRope string

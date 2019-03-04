@@ -35,7 +35,7 @@ dependencies:
  - template-haskell
  - text
  - typed-process
- - unbeliever >= 0.9.0
+ - unbeliever >= 0.9.1
  - unix
  - unordered-containers
 
