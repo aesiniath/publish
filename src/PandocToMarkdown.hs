@@ -115,7 +115,7 @@ orderedlistToMarkdown margin (num,style,delim) blockss =
     listToMarkdown (intoMarkers (num,style,delim)) margin blockss
   where
     intoMarkers = fmap pad . fmap intoRope . orderedListMarkers
-    pad text = text <> if width text > 2 then " " else "  "
+    pad text = text <> if widthRope text > 2 then " " else "  "
 
 listToMarkdown :: [Rope] -> Int -> [[Block]] -> Rope
 listToMarkdown markers margin items =
@@ -232,9 +232,9 @@ rectanglerize size align text =
   let
     ls = breakLines (wrap size text)
 
-    fix l | width l <  size =
+    fix l | widthRope l <  size =
               let
-                padding = size - width l
+                padding = size - widthRope l
                 (left,remain) = divMod padding 2
                 right = left + remain
               in case align of
@@ -242,7 +242,7 @@ rectanglerize size align text =
                 AlignRight   -> intoRope (replicate padding ' ') <> l
                 AlignLeft    -> l <> intoRope (replicate padding ' ')
                 AlignDefault -> l <> intoRope (replicate padding ' ')
-          | width l == size = case align of
+          | widthRope l == size = case align of
                 AlignRight -> impureThrow (NotSafe "Column width insufficient to show alignment")
                 _ -> l
           | otherwise       = impureThrow (NotSafe "Line wider than permitted size")
@@ -303,7 +303,7 @@ vertical ch rects =
 
 inlinesToMarkdown :: [Inline] -> Rope
 inlinesToMarkdown inlines =
-    foldl' (\text inline -> append (convertInline inline) text) emptyRope inlines
+    foldl' (\text inline -> appendRope (convertInline inline) text) emptyRope inlines
 
 convertInline :: Inline -> Rope
 convertInline inline =
