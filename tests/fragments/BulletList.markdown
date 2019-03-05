@@ -26,4 +26,3 @@ And we're done.
 -   Except we're not done, because  
     What happens if we have a line break?  
     It had better work.
-

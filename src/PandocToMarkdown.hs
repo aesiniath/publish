@@ -36,8 +36,10 @@ pandocToMarkdown (Pandoc _ blocks) =
     blocksToMarkdown blocks
 
 blocksToMarkdown :: [Block] -> Rope
-blocksToMarkdown blocks =
-    foldl' (\text block -> text <> (convertBlock __WIDTH__ block) <> "\n") emptyRope blocks
+blocksToMarkdown [] = emptyRope
+blocksToMarkdown (block1:blocks) =
+    convertBlock __WIDTH__  block1 <> foldl'
+        (\text block -> text <> "\n" <> convertBlock __WIDTH__ block) emptyRope blocks
 
 convertBlock :: Int -> Block -> Rope
 convertBlock margin block =

@@ -9,4 +9,3 @@ in the ancient dialect,
 these need to be treated specially when represented as Markdown. Otherwise the
 lines that aren't lines will end up as lines that are part of other lines, and
 be wrapped, or unwrapped, accordingly.
-

@@ -1,5 +1,5 @@
 name: publish
-version:  0.4.1
+version:  0.4.3
 synopsis: Publishing tools for papers, books, and presentations
 description: |
   Tools for rendering markdown-centric documents into PDFs.
