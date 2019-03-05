@@ -58,6 +58,7 @@ convertBlock margin block =
     OrderedList attrs blockss -> orderedlistToMarkdown margin attrs blockss
     HorizontalRule -> "---\n"
     Table caption alignments relatives headers rows -> tableToMarkdown caption alignments relatives headers rows
+    Div attr blocks -> divToMarkdown margin attr blocks
     _ -> error msg
 
 plaintextToMarkdown :: Int -> [Inline] -> Rope
@@ -159,6 +160,40 @@ listToMarkdown markers margin items =
     f marker (first,text) line = if first
         then (False,text <> marker <> line <> "\n")
         else (False,text <> "    " <> line <> "\n")
+
+
+{-
+In Pandoc flavoured Markdown, <div> are recognized as valid Markdown via
+the `native_divs` extension. We turn that off, in favour of the
+`fenced_divs` extension, three (or more) colons
+
+    ::: {#identifier .class key=value}
+    Content
+    :::
+
+-}
+divToMarkdown :: Int -> Attr -> [Block] -> Rope
+divToMarkdown margin attr blocks =
+  let
+    first = ":::" <> attributesToMarkdown attr
+    last = ":::"
+    content = mconcat . intersperse "\n" . fmap (convertBlock margin)
+  in
+    first <> "\n" <> content blocks <> last <> "\n"
+
+attributesToMarkdown :: Attr -> Rope
+attributesToMarkdown ("", [], []) = emptyRope
+attributesToMarkdown ("", [single], []) = intoRope single
+attributesToMarkdown (identifier, [], []) = "{#" <> intoRope identifier <> "}"
+attributesToMarkdown (identifier, classes, pairs) =
+  let
+    i = if null identifier
+        then emptyRope
+        else "#" <> intoRope identifier <> " "
+    cs = fmap (\c -> "." <> intoRope c) classes
+    ps = fmap (\ (k,v) -> intoRope k <> "=" <> intoRope v) pairs
+  in
+    "{" <> i <> mconcat (intersperse " " (cs ++ ps)) <> "}"
 
 
 tableToMarkdown

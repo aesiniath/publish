@@ -19,6 +19,7 @@ fragments =
     [ ("headings",      "tests/fragments/Headings.markdown")
     , ("paragraphs",    "tests/fragments/Paragraphs.markdown")
     , ("code blocks",   "tests/fragments/CodeBlocks.markdown")
+    , ("div blocks",    "tests/fragments/DivBlocks.markdown")
     , ("LaTeX blocks",  "tests/fragments/LatexBlocks.markdown")
     , ("HTML blocks",   "tests/fragments/HtmlBlocks.markdown")
     , ("poem passage",  "tests/fragments/Poetry.markdown")
