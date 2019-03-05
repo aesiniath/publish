@@ -93,13 +93,10 @@ headingToMarkdown level inlines =
         n -> intoRope (replicate n '#') <> " " <> text <> "\n"
 
 codeToMarkdown :: Attr -> String -> Rope
-codeToMarkdown (_,tags,_) literal =
+codeToMarkdown attr literal =
   let
     body = intoRope literal
-    lang = case tags of
-        []      -> ""
-        [tag]   -> intoRope tag
-        _       -> impureThrow (NotSafe "A code block can't have mulitple langage tags")
+    lang = attributesToMarkdown attr
   in
     "```" <> lang <> "\n" <>
     body <> "\n" <>
@@ -176,15 +173,15 @@ divToMarkdown :: Int -> Attr -> [Block] -> Rope
 divToMarkdown margin attr blocks =
   let
     first = ":::" <> attributesToMarkdown attr
-    last = ":::"
+    trail = ":::"
     content = mconcat . intersperse "\n" . fmap (convertBlock margin)
   in
-    first <> "\n" <> content blocks <> last <> "\n"
+    first <> "\n" <> content blocks <> trail <> "\n"
 
 attributesToMarkdown :: Attr -> Rope
 attributesToMarkdown ("", [], []) = emptyRope
 attributesToMarkdown ("", [single], []) = intoRope single
-attributesToMarkdown (identifier, [], []) = "{#" <> intoRope identifier <> "}"
+attributesToMarkdown (identifier, [], []) = " {#" <> intoRope identifier <> "}"
 attributesToMarkdown (identifier, classes, pairs) =
   let
     i = if null identifier
@@ -193,7 +190,7 @@ attributesToMarkdown (identifier, classes, pairs) =
     cs = fmap (\c -> "." <> intoRope c) classes
     ps = fmap (\ (k,v) -> intoRope k <> "=" <> intoRope v) pairs
   in
-    "{" <> i <> mconcat (intersperse " " (cs ++ ps)) <> "}"
+    " {" <> i <> mconcat (intersperse " " (cs ++ ps)) <> "}"
 
 
 tableToMarkdown
