@@ -49,6 +49,7 @@ convertBlock margin block =
     Header level _ inlines -> headingToMarkdown level inlines
     Null -> emptyRope
     RawBlock (Format "tex") string -> intoRope string <> "\n"
+    RawBlock (Format "html") string -> intoRope string <> "\n"
     RawBlock _ _ -> error msg
     CodeBlock attr string -> codeToMarkdown attr string
     LineBlock list -> poemToMarkdown list
@@ -331,6 +332,7 @@ convertInline inline =
     Image _ inlines (url, _) -> imageToMarkdown inlines url
     Code _ string -> "`" <> intoRope string <> "`"
     RawInline (Format "tex") string -> intoRope string
+    RawInline (Format "html") string -> intoRope string
     Link ("",["uri"],[]) _ (url, _) -> uriToMarkdown url
     Link _ inlines (url, _) -> linkToMarkdown inlines url
     _ -> error msg

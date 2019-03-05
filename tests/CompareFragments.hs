@@ -20,6 +20,7 @@ fragments =
     , ("paragraphs",    "tests/fragments/Paragraphs.markdown")
     , ("code blocks",   "tests/fragments/CodeBlocks.markdown")
     , ("LaTeX blocks",  "tests/fragments/LatexBlocks.markdown")
+    , ("HTML blocks",   "tests/fragments/HtmlBlocks.markdown")
     , ("poem passage",  "tests/fragments/Poetry.markdown")
     , ("blockquotes",   "tests/fragments/Blockquotes.markdown")
     , ("bulletlist",    "tests/fragments/BulletList.markdown")
