@@ -1,6 +1,9 @@
 Some people just can't resist:
 
-<h1>This is a first level heading</h1>
+<form action="/hero.php" method="post">
+I don't know what I'm doing. Do you <input type="text" name="question"> have
+the foggiest idea?
+</form>
 
 But you <i>never</i> know.
 
