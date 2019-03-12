@@ -58,10 +58,10 @@ convertBlock margin block =
     BlockQuote blocks -> quoteToMarkdown margin blocks
     BulletList blockss -> bulletlistToMarkdown margin blockss
     OrderedList attrs blockss -> orderedlistToMarkdown margin attrs blockss
+    DefinitionList blockss -> definitionlistToMarkdown margin blockss
     HorizontalRule -> "---\n"
     Table caption alignments relatives headers rows -> tableToMarkdown caption alignments relatives headers rows
     Div attr blocks -> divToMarkdown margin attr blocks
-    _ -> error msg
 
 plaintextToMarkdown :: Int -> [Inline] -> Rope
 plaintextToMarkdown margin inlines =
@@ -130,12 +130,24 @@ orderedlistToMarkdown margin (num,style,delim) blockss =
     intoMarkers = fmap pad . fmap intoRope . orderedListMarkers
     pad text = text <> if widthRope text > 2 then " " else "  "
 
+definitionlistToMarkdown :: Int -> [([Inline],[[Block]])] -> Rope
+definitionlistToMarkdown margin definitions =
+    case definitions of
+        [] -> emptyRope
+        (definition1:definitionN) -> handleDefinition definition1 <> foldl'
+            (\text definition -> text <> "\n" <> handleDefinition definition) emptyRope definitionN
+  where
+    handleDefinition :: ([Inline],[[Block]]) -> Rope
+    handleDefinition (term,blockss) =
+        inlinesToMarkdown term <> "\n\n" <> listToMarkdown (repeat ":   ") margin blockss
+
+
 listToMarkdown :: [Rope] -> Int -> [[Block]] -> Rope
 listToMarkdown markers margin items =
-  case pairs of
-    [] -> emptyRope
-    ((marker1,blocks1):pairsN) -> listitem marker1 blocks1 <> foldl'
-        (\text (markerN,blocksN) -> text <> spacer blocksN <> listitem markerN blocksN) emptyRope pairsN
+    case pairs of
+        [] -> emptyRope
+        ((marker1,blocks1):pairsN) -> listitem marker1 blocks1 <> foldl'
+            (\text (markerN,blocksN) -> text <> spacer blocksN <> listitem markerN blocksN) emptyRope pairsN
   where
     pairs = zip markers items
 

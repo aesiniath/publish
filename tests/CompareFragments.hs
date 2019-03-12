@@ -24,8 +24,9 @@ fragments =
     , ("HTML blocks",   "tests/fragments/HtmlBlocks.markdown")
     , ("poem passage",  "tests/fragments/Poetry.markdown")
     , ("blockquotes",   "tests/fragments/Blockquotes.markdown")
-    , ("bulletlist",    "tests/fragments/BulletList.markdown")
-    , ("orderedlist",   "tests/fragments/OrderedList.markdown")
+    , ("bullet list",    "tests/fragments/BulletList.markdown")
+    , ("ordered list",   "tests/fragments/OrderedList.markdown")
+    , ("definition list", "tests/fragments/DefinitionList.markdown")
     , ("multiline table", "tests/fragments/MultilineTable.markdown")
     ]
 
