@@ -147,21 +147,29 @@ listToMarkdown markers margin items =
     case pairs of
         [] -> emptyRope
         ((marker1,blocks1):pairsN) -> listitem marker1 blocks1 <> foldl'
-            (\text (markerN,blocksN) -> text <> spacer blocksN <> listitem markerN blocksN) emptyRope pairsN
+            (\text (markerN,blocksN) -> text <> spacerN blocksN <> listitem markerN blocksN) emptyRope pairsN
   where
     pairs = zip markers items
 
     listitem :: Rope -> [Block] -> Rope
     listitem _ [] = emptyRope
     listitem marker (block1:blocks) = indent marker True block1 <> foldl'
-        (\ text blockN -> text <> "\n" <> indent marker False blockN) emptyRope blocks
+        (\text blockN -> text <> spacer blockN <> indent marker False blockN) emptyRope blocks
 
-    spacer :: [Block] -> Rope
-    spacer [] = emptyRope
-    spacer (block:_) = case block of
+    spacerN :: [Block] -> Rope
+    spacerN [] = emptyRope
+    spacerN (block:_) = spacer block
+
+{-
+Tricky. Tight lists are represented by Plain, whereas more widely spaced
+lists are represented by Para. A complex block (specifically a nested
+list!) will handle its own spacing. This seems fragile.
+-}
+    spacer :: Block -> Rope
+    spacer block = case block of
         Plain _ -> emptyRope
         Para _  -> "\n"
-        _       -> "\n"
+        _       -> emptyRope -- ie nested list
 
     indent :: Rope -> Bool -> Block -> Rope
     indent marker first =
