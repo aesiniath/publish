@@ -142,7 +142,7 @@ listToMarkdown markers margin items =
     listitem :: Rope -> [Block] -> Rope
     listitem _ [] = emptyRope
     listitem marker (block1:blocks) = indent marker True block1 <> foldl'
-        (\ text blockN -> text <> indent marker False blockN) emptyRope blocks
+        (\ text blockN -> text <> "\n" <> indent marker False blockN) emptyRope blocks
 
     spacer :: [Block] -> Rope
     spacer [] = emptyRope
