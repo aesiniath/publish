@@ -11,3 +11,4 @@
 
 # runtime debris
 /.target
+*.pdf
