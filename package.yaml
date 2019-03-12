@@ -62,17 +62,6 @@ executables:
      - PandocToMarkdown
 
 tests:
-  experiment:
-    dependencies:
-     - unbeliever
-    source-dirs:
-     - tests
-     - src
-    main: ReformatTest.hs
-    other-modules:
-     - FormatDocument
-     - PandocToMarkdown
-
   check:
     dependencies:
      - hspec
