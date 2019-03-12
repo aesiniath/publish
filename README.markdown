@@ -41,7 +41,7 @@ Documentation
 -------------
 
 There is a [getting started][Tutorial] tutorial, [background][Background]
-notes, and several [examples](Examples). And you can get help from the
+notes, and several [examples][Examples]. And you can get help from the
 command-line:
 
 ```
