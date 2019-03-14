@@ -8,15 +8,15 @@ Anyone who has used of LaTeX will be aware that rendering even a simple document
 requires hundreds of packages to be installed. If you want to install the
 packages yourself on your computer you can freely do so.
 
-To help people get started we supply a built-in preamble; it still depends on
-some 216 LaTeX packages, though. The process of working through trying to render a
-document and one-by-one hunting down the packages you need to install can be
-tedious.
+To help people get started we supply an optional, builtin preamble; it still
+depends on some 216 LaTeX packages, though. The process of working through
+trying to render a document and one-by-one hunting down the packages you need
+to install can be tedious.
 
-So to compliment the built-in preamble we supply a prebuilt Docker image with
+So to compliment the builtin preamble we supply a prebuilt Docker image with
 these packages already installed. You can instruct _render_ to run the LaTeX
-processor in there, rather than on your own system, by specifying the `--docker`
-option:
+processor in there, rather than on your own system, by specifying the
+`--docker` option:
 
 ```shell
 $ render --builtin-preamble --docker=oprdyn/publish-builtin:latest Trees.book
@@ -27,7 +27,8 @@ You are welcome to use any container you like. You need Latexmk installed (the
 **latexmk** package) with the XeLaTeX processor installed (the
 **texlive-xelatex** collection should pull it in) as _render_ will invoke
 _latexmk_ command to build your resultant PDF. Images require that
-_rsvg-convert_ is present (supplied by **librsvg2-tools** on Fedora).
+_rsvg-convert_ is present (supplied by **librsvg2-tools** on Fedora) on your
+host system.
 
 If you specify the `--docker` option, _render_ will spawn a Docker container
 from the image you specify, mount the temporary directory with the intermediate
@@ -56,7 +57,7 @@ $ docker run \
 $
 ```
 
-Nothing is ever simple in Dockerland, howver. The first problem is that the
+Nothing is ever simple in Dockerland, however. The first problem is that the
 _docker_ command line program needs to be installed in the container that
 _render_ is running in. When you just run these programs ordinarily on a Linux
 host then it of course has access to run Docker. But if run inside a container
