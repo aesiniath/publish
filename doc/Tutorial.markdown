@@ -103,11 +103,9 @@ $
 ```
 
 If you specify the `--docker` option _render_ will spawn a Docker container
-from the image you specify. The image shown above has the dependencies
-necessary to render documents using the built-in default preamble. You're
-welcome to use any container you like; you need the **latexmk** package
-with the **xelatex** LaTeX processor installed in it as _render_ will
-invoke _latexmk_ command to build your resultant PDF.
+from the image you specify. The image shown above has the dependencies You're
+welcome to use any container you like. Further details are on the
+[Docker](Docker.markdown) page.
 
 See also:
 
