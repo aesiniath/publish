@@ -179,10 +179,13 @@ list!) will handle its own spacing. This seems fragile.
         snd . foldl' (f marker) (True,emptyRope) . breakLines . blocksToMarkdown (margin - 4)
 
     f :: Rope -> (Bool,Rope) -> Rope -> (Bool,Rope)
-    f marker (first,text) line = if first
-        then (False,text <> marker <> line <> "\n")
-        else (False,text <> "    " <> line <> "\n")
-
+    f marker (first,text) line
+        | nullRope line =
+            (False,text <> "\n") -- don't indent lines that should be blank
+        | otherwise =
+            if first
+                then (False,text <> marker <> line <> "\n")
+                else (False,text <> "    " <> line <> "\n")
 
 {-
 In Pandoc flavoured Markdown, <div> are recognized as valid Markdown via
