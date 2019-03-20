@@ -25,7 +25,7 @@ import Data.Semigroup (Semigroup(..))
 import Data.List (intersperse)
 import GHC.Generics (Generic)
 import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
-    , ListAttributes, Alignment(..), TableCell, MathType(..))
+    , ListAttributes, Alignment(..), TableCell, MathType(..), QuoteType(..))
 import Text.Pandoc.Shared (orderedListMarkers)
 
 __WIDTH__ :: Int
@@ -404,10 +404,14 @@ convertInline inline =
     Link _ inlines (url, _) -> linkToMarkdown inlines url
     Strikeout inlines -> "~~" <> inlinesToMarkdown inlines <> "~~"
     Math mode string -> mathToMarkdown mode string
+    -- then things start getting weird
     SmallCaps inlines -> smallcapsToMarkdown inlines
     Subscript inlines -> "~" <> inlinesToMarkdown inlines <> "~"
     Superscript inlines -> "^" <> inlinesToMarkdown inlines <> "^"
     Span attr inlines -> spanToMarkdown attr inlines
+    -- I don't know what the point of these ones are
+    Quoted SingleQuote inlines -> "'" <> inlinesToMarkdown inlines <> "'"
+    Quoted DoubleQuote inlines -> "\"" <> inlinesToMarkdown inlines <> "\""
     _ -> error msg
 
 {-
