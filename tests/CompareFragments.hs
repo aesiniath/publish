@@ -24,10 +24,11 @@ fragments =
     , ("HTML blocks",   "tests/fragments/HtmlBlocks.markdown")
     , ("poem passage",  "tests/fragments/Poetry.markdown")
     , ("blockquotes",   "tests/fragments/Blockquotes.markdown")
-    , ("bullet list",    "tests/fragments/BulletList.markdown")
-    , ("ordered list",   "tests/fragments/OrderedList.markdown")
+    , ("bullet list",   "tests/fragments/BulletList.markdown")
+    , ("ordered list",  "tests/fragments/OrderedList.markdown")
     , ("definition list", "tests/fragments/DefinitionList.markdown")
     , ("multiline table", "tests/fragments/MultilineTable.markdown")
+    , ("weird inlines", "tests/fragments/WeirdInlines.markdown")
     ]
 
 checkByComparingFragments :: Spec

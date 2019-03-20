@@ -398,6 +398,8 @@ convertInline inline =
     Strikeout inlines -> "~~" <> inlinesToMarkdown inlines <> "~~"
     Math mode string -> mathToMarkdown mode string
     SmallCaps inlines -> smallcapsToMarkdown inlines
+    Subscript inlines -> "~" <> inlinesToMarkdown inlines <> "~"
+    Superscript inlines -> "^" <> inlinesToMarkdown inlines <> "^"
     _ -> error msg
 
 imageToMarkdown :: [Inline] -> String -> Rope
