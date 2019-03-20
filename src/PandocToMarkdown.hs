@@ -397,6 +397,7 @@ convertInline inline =
     Link _ inlines (url, _) -> linkToMarkdown inlines url
     Strikeout inlines -> "~~" <> inlinesToMarkdown inlines <> "~~"
     Math mode string -> mathToMarkdown mode string
+    SmallCaps inlines -> smallcapsToMarkdown inlines
     _ -> error msg
 
 imageToMarkdown :: [Inline] -> String -> Rope
@@ -426,3 +427,10 @@ linkToMarkdown inlines url =
 mathToMarkdown :: MathType -> String -> Rope
 mathToMarkdown (InlineMath) math = "$" <> intoRope math <> "$"
 mathToMarkdown (DisplayMath) math = "$$" <> intoRope math <> "$$"
+
+smallcapsToMarkdown :: [Inline] -> Rope
+smallcapsToMarkdown inlines =
+  let
+    text = inlinesToMarkdown inlines
+  in
+    "[" <> text <> "]{.smallcaps}"
