@@ -33,20 +33,20 @@ __WIDTH__ = 78
 
 pandocToMarkdown :: Pandoc -> Rope
 pandocToMarkdown (Pandoc _ blocks) =
-    blocksToMarkdown blocks
+    blocksToMarkdown __WIDTH__ blocks
 
-blocksToMarkdown :: [Block] -> Rope
-blocksToMarkdown [] = emptyRope
-blocksToMarkdown (block1:blocks) =
-    convertBlock __WIDTH__  block1 <> foldl'
-        (\text block -> text <> "\n" <> convertBlock __WIDTH__ block) emptyRope blocks
+blocksToMarkdown :: Int -> [Block] -> Rope
+blocksToMarkdown _ [] = emptyRope
+blocksToMarkdown margin (block1:blocks) =
+    convertBlock margin block1 <> foldl'
+        (\text block -> text <> "\n" <> convertBlock margin block) emptyRope blocks
 
 convertBlock :: Int -> Block -> Rope
 convertBlock margin block =
   let
     msg = "Unfinished block: " ++ show block -- FIXME
   in case block of
-    Plain inlines -> paragraphToMarkdown margin inlines
+    Plain inlines -> plaintextToMarkdown margin inlines
     Para  inlines -> paragraphToMarkdown margin inlines
     Header level _ inlines -> headingToMarkdown level inlines
     Null -> emptyRope
@@ -63,9 +63,15 @@ convertBlock margin block =
     Table caption alignments relatives headers rows -> tableToMarkdown caption alignments relatives headers rows
     Div attr blocks -> divToMarkdown margin attr blocks
 
+{-
+This does **not** emit a newline at the end. The intersperse happening in
+`blocksToMarkdown` will terminate the line, but you won't get a blank line
+between blocks as is the convention everywhere else (this was critical when
+lists were nested in tight lists).
+-}
 plaintextToMarkdown :: Int -> [Inline] -> Rope
 plaintextToMarkdown margin inlines =
-    wrap margin (inlinesToMarkdown inlines)
+    wrap' margin (inlinesToMarkdown inlines)
 
 {-
 Everything was great until we had to figure out how to deal with line
@@ -77,11 +83,12 @@ here; first we break on those, and then we wrap the results.
 -}
 paragraphToMarkdown :: Int -> [Inline] -> Rope
 paragraphToMarkdown margin inlines =
-    wrap' (inlinesToMarkdown inlines) <> "\n"
-  where
-    wrap' :: Rope -> Rope
-    wrap' = mconcat . intersperse "  \n" . fmap (wrap margin) . breakPieces isLineSeparator
+    wrap' margin (inlinesToMarkdown inlines) <> "\n"
 
+wrap' :: Int -> Rope -> Rope
+wrap' margin =
+    mconcat . intersperse "  \n" . fmap (wrap margin) . breakPieces isLineSeparator
+  where
     isLineSeparator = (== '\x2028')
 
 headingToMarkdown :: Int -> [Inline] -> Rope
@@ -147,33 +154,29 @@ listToMarkdown markers margin items =
     case pairs of
         [] -> emptyRope
         ((marker1,blocks1):pairsN) -> listitem marker1 blocks1 <> foldl'
-            (\text (markerN,blocksN) -> text <> spacerN blocksN <> listitem markerN blocksN) emptyRope pairsN
+            (\text (markerN,blocksN) -> text <> spacer blocksN <> listitem markerN blocksN) emptyRope pairsN
   where
     pairs = zip markers items
 
     listitem :: Rope -> [Block] -> Rope
     listitem _ [] = emptyRope
-    listitem marker (block1:blocks) = indent marker True block1 <> foldl'
-        (\text blockN -> text <> spacer blockN <> indent marker False blockN) emptyRope blocks
-
-    spacerN :: [Block] -> Rope
-    spacerN [] = emptyRope
-    spacerN (block:_) = spacer block
+    listitem marker blocks = indent marker blocks
 
 {-
 Tricky. Tight lists are represented by Plain, whereas more widely spaced
 lists are represented by Para. A complex block (specifically a nested
 list!) will handle its own spacing. This seems fragile.
 -}
-    spacer :: Block -> Rope
-    spacer block = case block of
+    spacer :: [Block] -> Rope
+    spacer [] = emptyRope
+    spacer (block:_) = case block of
         Plain _ -> emptyRope
         Para _  -> "\n"
         _       -> emptyRope -- ie nested list
 
-    indent :: Rope -> Bool -> Block -> Rope
-    indent marker first =
-        snd . foldl' (f marker) (first,emptyRope) . breakLines . convertBlock (margin - 4)
+    indent :: Rope -> [Block] -> Rope
+    indent marker =
+        snd . foldl' (f marker) (True,emptyRope) . breakLines . blocksToMarkdown (margin - 4)
 
     f :: Rope -> (Bool,Rope) -> Rope -> (Bool,Rope)
     f marker (first,text) line = if first

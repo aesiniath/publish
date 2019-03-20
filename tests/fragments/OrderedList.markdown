@@ -32,6 +32,8 @@ Nested list:
     c)  Now to get something straight!
 3.  The third one
 4.  I like numbers.
+    i)  Like "pi"; and
+    ii) The number "fourty-two".
 5.  What is a deuteronomy?
 
 Spaced list:
@@ -44,6 +46,16 @@ Spaced list:
 2.  Aenean ultrices eget risus efficitur placerat. Suspendisse vitae pharetra
     erat, posuere laoreet nisi. Quisque eget luctus mi. Sed sit amet sem mi.
     Vestibulum non porta turpis. Donec accumsan pharetra tortor.
+
+    i.  Un
+
+    ii. Deux
+
+    iii. Trois
+
+    iv. Quatre
+
+    v.  Cinq
 
 3.  Vivamus egestas eget sem non mollis. Duis auctor odio libero, a sodales mi
     efficitur vel. Orci varius natoque penatibus et magnis dis parturient
