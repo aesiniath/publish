@@ -384,7 +384,7 @@ convertInline inline =
     msg = "Unfinished inline: " ++ show inline
   in case inline of
     Space -> " "
-    Str string -> intoRope string
+    Str string -> stringToMarkdown string
     Emph inlines -> "_" <> inlinesToMarkdown inlines <> "_"
     Strong inlines -> "**" <> inlinesToMarkdown inlines <> "**"
     SoftBreak -> " "
@@ -401,6 +401,17 @@ convertInline inline =
     Subscript inlines -> "~" <> inlinesToMarkdown inlines <> "~"
     Superscript inlines -> "^" <> inlinesToMarkdown inlines <> "^"
     _ -> error msg
+
+{-
+Pandoc uses U+00A0 aka ASCII 160 aka &nbsp; to mark a non-breaking space, which
+seems to be how it describes an escaped space in Markdown. So scan for these
+and replace the escaped space on output.
+-}
+stringToMarkdown :: String -> Rope
+stringToMarkdown =
+    mconcat . intersperse "\\ " . breakPieces isNonBreaking . intoRope
+  where
+    isNonBreaking c = c == '\x00a0'
 
 imageToMarkdown :: [Inline] -> String -> Rope
 imageToMarkdown inlines url =
