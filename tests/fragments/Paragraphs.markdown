@@ -4,7 +4,8 @@ this were not a test, you wouldn't _need_ to know. Hic.
 Paragraphs often include [links](https://www.example.com/) and raw URIs of the
 form <https://www.example.com/> or something like that.
 
-Some [links](http://www.example.com "Click here!") have titles.
+Some [links](http://www.example.com "Click here!") have titles. And believe it
+or not some [other](http://www.example.com){.darkgray} links have attributes!
 
 Confusingly, there are paragraphs that have `<BR>` in them. Called line breaks
 in the ancient dialect,  
