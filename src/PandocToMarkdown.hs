@@ -400,8 +400,9 @@ convertInline inline =
     Code _ string -> "`" <> intoRope string <> "`"
     RawInline (Format "tex") string -> intoRope string
     RawInline (Format "html") string -> intoRope string
+    RawInline (_) _ -> error msg
     Link ("",["uri"],[]) _ (url, _) -> uriToMarkdown url
-    Link _ inlines (url, _) -> linkToMarkdown inlines url
+    Link _ inlines (url, title) -> linkToMarkdown inlines url title
     Strikeout inlines -> "~~" <> inlinesToMarkdown inlines <> "~~"
     Math mode string -> mathToMarkdown mode string
     -- then things start getting weird
@@ -440,11 +441,13 @@ uriToMarkdown url =
   in
     "<" <> target <> ">"
 
-linkToMarkdown :: [Inline] -> String -> Rope
-linkToMarkdown inlines url =
+linkToMarkdown :: [Inline] -> String ->  String -> Rope
+linkToMarkdown inlines url title =
   let
     text = inlinesToMarkdown inlines
-    target = intoRope url
+    target = case title of
+        [] -> intoRope url
+        _  -> intoRope url <> " \"" <> intoRope title <> "\""
   in
     "[" <> text <> "](" <> target <> ")"
 

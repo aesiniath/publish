@@ -4,6 +4,8 @@ this were not a test, you wouldn't _need_ to know. Hic.
 Paragraphs often include [links](https://www.example.com/) and raw URIs of the
 form <https://www.example.com/> or something like that.
 
+Some [links](http://www.example.com "Click here!") have titles.
+
 Confusingly, there are paragraphs that have `<BR>` in them. Called line breaks
 in the ancient dialect,  
 these need to be treated specially when represented as Markdown. Otherwise the
