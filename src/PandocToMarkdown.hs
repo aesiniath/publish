@@ -25,7 +25,7 @@ import Data.Semigroup (Semigroup(..))
 import Data.List (intersperse)
 import GHC.Generics (Generic)
 import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
-    , ListAttributes, Alignment(..), TableCell)
+    , ListAttributes, Alignment(..), TableCell, MathType(..))
 import Text.Pandoc.Shared (orderedListMarkers)
 
 __WIDTH__ :: Int
@@ -395,6 +395,8 @@ convertInline inline =
     RawInline (Format "html") string -> intoRope string
     Link ("",["uri"],[]) _ (url, _) -> uriToMarkdown url
     Link _ inlines (url, _) -> linkToMarkdown inlines url
+    Strikeout inlines -> "~~" <> inlinesToMarkdown inlines <> "~~"
+    Math mode string -> mathToMarkdown mode string
     _ -> error msg
 
 imageToMarkdown :: [Inline] -> String -> Rope
@@ -420,3 +422,7 @@ linkToMarkdown inlines url =
   in
     "[" <> text <> "](" <> target <> ")"
 
+-- is there more to this?
+mathToMarkdown :: MathType -> String -> Rope
+mathToMarkdown (InlineMath) math = "$" <> intoRope math <> "$"
+mathToMarkdown (DisplayMath) math = "$$" <> intoRope math <> "$$"
