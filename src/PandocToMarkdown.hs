@@ -105,7 +105,7 @@ codeToMarkdown :: Attr -> String -> Rope
 codeToMarkdown attr literal =
   let
     body = intoRope literal
-    lang = attributesToMarkdown attr
+    lang = fencedAttributesToMarkdown attr
   in
     "```" <> lang <> "\n" <>
     body <> "\n" <>
@@ -200,16 +200,23 @@ the `native_divs` extension. We turn that off, in favour of the
 divToMarkdown :: Int -> Attr -> [Block] -> Rope
 divToMarkdown margin attr blocks =
   let
-    first = ":::" <> attributesToMarkdown attr
+    first = ":::" <> fencedAttributesToMarkdown attr
     trail = ":::"
     content = mconcat . intersperse "\n" . fmap (convertBlock margin)
   in
     first <> "\n" <> content blocks <> trail <> "\n"
 
+-- special case for (notably) code blocks where a single class doesn't need braces.
+fencedAttributesToMarkdown :: Attr -> Rope
+fencedAttributesToMarkdown ("", [], []) = emptyRope
+fencedAttributesToMarkdown ("", [single], []) = intoRope single
+fencedAttributesToMarkdown (identifier, [], []) = " " <> attributesToMarkdown (identifier, [], [])
+fencedAttributesToMarkdown (identifier, classes, pairs) = " " <> attributesToMarkdown (identifier, classes, pairs)
+
+-- present attributes, used by both fenced blocks and inline spans
 attributesToMarkdown :: Attr -> Rope
 attributesToMarkdown ("", [], []) = emptyRope
-attributesToMarkdown ("", [single], []) = intoRope single
-attributesToMarkdown (identifier, [], []) = " {#" <> intoRope identifier <> "}"
+attributesToMarkdown (identifier, [], []) = "{#" <> intoRope identifier <> "}"
 attributesToMarkdown (identifier, classes, pairs) =
   let
     i = if null identifier
@@ -218,7 +225,7 @@ attributesToMarkdown (identifier, classes, pairs) =
     cs = fmap (\c -> "." <> intoRope c) classes
     ps = fmap (\ (k,v) -> intoRope k <> "=" <> intoRope v) pairs
   in
-    " {" <> i <> mconcat (intersperse " " (cs ++ ps)) <> "}"
+    "{" <> i <> mconcat (intersperse " " (cs ++ ps)) <> "}"
 
 
 tableToMarkdown
@@ -400,6 +407,7 @@ convertInline inline =
     SmallCaps inlines -> smallcapsToMarkdown inlines
     Subscript inlines -> "~" <> inlinesToMarkdown inlines <> "~"
     Superscript inlines -> "^" <> inlinesToMarkdown inlines <> "^"
+    Span attr inlines -> spanToMarkdown attr inlines
     _ -> error msg
 
 {-
@@ -447,3 +455,10 @@ smallcapsToMarkdown inlines =
     text = inlinesToMarkdown inlines
   in
     "[" <> text <> "]{.smallcaps}"
+
+spanToMarkdown :: Attr -> [Inline] -> Rope
+spanToMarkdown attr inlines =
+  let
+    text = inlinesToMarkdown inlines
+  in
+    "[" <> text <> "]" <> attributesToMarkdown attr
