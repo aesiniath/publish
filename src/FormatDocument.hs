@@ -55,9 +55,9 @@ loadFragment file =
 markdownToPandoc :: T.Text -> IO Pandoc
 markdownToPandoc contents =
   let
-    extensions = disableExtension Ext_smart pandocExtensions
+    disableFrom = disableExtension Ext_implicit_figures . disableExtension Ext_smart
     readingOptions = def
-        { readerExtensions = extensions
+        { readerExtensions = disableFrom pandocExtensions
         }
   in do
     runIOorExplode $ do
