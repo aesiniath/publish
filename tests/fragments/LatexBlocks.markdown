@@ -10,4 +10,3 @@ It's more confusing when we look at \textbf{strong} text that is formatted
 with inline LaTeX.
 
 But you never know.
-

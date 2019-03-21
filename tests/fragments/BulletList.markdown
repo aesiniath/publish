@@ -11,7 +11,9 @@ Simple list with longer lines:
 
 We also have more complex bullet lists:
 
--   This is the fifth item;
+-   This is the fifth item.
+
+    It has a second paragrah;
 
 -   This is the sixth item, which has lots of words about current events and
     learned discussion about whether the stock market will go up or down
@@ -23,3 +25,6 @@ We also have more complex bullet lists:
 
 And we're done.
 
+-   Except we're not done, because  
+    What happens if we have a line break?  
+    It had better work.

@@ -25,7 +25,7 @@ import Data.Semigroup (Semigroup(..))
 import Data.List (intersperse)
 import GHC.Generics (Generic)
 import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
-    , ListAttributes, Alignment(..), TableCell)
+    , ListAttributes, Alignment(..), TableCell, MathType(..), QuoteType(..))
 import Text.Pandoc.Shared (orderedListMarkers)
 
 __WIDTH__ :: Int
@@ -33,40 +33,63 @@ __WIDTH__ = 78
 
 pandocToMarkdown :: Pandoc -> Rope
 pandocToMarkdown (Pandoc _ blocks) =
-    blocksToMarkdown blocks
+    blocksToMarkdown __WIDTH__ blocks
 
-blocksToMarkdown :: [Block] -> Rope
-blocksToMarkdown blocks =
-    foldl' (\text block -> text <> (convertBlock __WIDTH__ block) <> "\n") emptyRope blocks
+blocksToMarkdown :: Int -> [Block] -> Rope
+blocksToMarkdown _ [] = emptyRope
+blocksToMarkdown margin (block1:blocks) =
+    convertBlock margin block1 <> foldl'
+        (\text block -> text <> "\n" <> convertBlock margin block) emptyRope blocks
 
 convertBlock :: Int -> Block -> Rope
 convertBlock margin block =
   let
     msg = "Unfinished block: " ++ show block -- FIXME
   in case block of
-    Plain inlines -> paragraphToMarkdown margin inlines
+    Plain inlines -> plaintextToMarkdown margin inlines
     Para  inlines -> paragraphToMarkdown margin inlines
     Header level _ inlines -> headingToMarkdown level inlines
     Null -> emptyRope
     RawBlock (Format "tex") string -> intoRope string <> "\n"
+    RawBlock (Format "html") string -> intoRope string <> "\n"
     RawBlock _ _ -> error msg
     CodeBlock attr string -> codeToMarkdown attr string
     LineBlock list -> poemToMarkdown list
     BlockQuote blocks -> quoteToMarkdown margin blocks
     BulletList blockss -> bulletlistToMarkdown margin blockss
     OrderedList attrs blockss -> orderedlistToMarkdown margin attrs blockss
+    DefinitionList blockss -> definitionlistToMarkdown margin blockss
     HorizontalRule -> "---\n"
     Table caption alignments relatives headers rows -> tableToMarkdown caption alignments relatives headers rows
-    _ -> error msg
+    Div attr blocks -> divToMarkdown margin attr blocks
 
+{-
+This does **not** emit a newline at the end. The intersperse happening in
+`blocksToMarkdown` will terminate the line, but you won't get a blank line
+between blocks as is the convention everywhere else (this was critical when
+lists were nested in tight lists).
+-}
 plaintextToMarkdown :: Int -> [Inline] -> Rope
 plaintextToMarkdown margin inlines =
-    wrap margin (inlinesToMarkdown inlines)
+    wrap' margin (inlinesToMarkdown inlines)
 
-
+{-
+Everything was great until we had to figure out how to deal with line
+breaks aka <BR>, represented in Markdown by [' ',' ']. We do this by
+replacing the line break Inline with \x2028. This character, U+2028 LS, is
+the Line Separator character. It's one of those symbols up in General
+Punctuation that no one ever uses. So we use it as a sentinel internally
+here; first we break on those, and then we wrap the results.
+-}
 paragraphToMarkdown :: Int -> [Inline] -> Rope
 paragraphToMarkdown margin inlines =
-    wrap margin (inlinesToMarkdown inlines) <> "\n"
+    wrap' margin (inlinesToMarkdown inlines) <> "\n"
+
+wrap' :: Int -> Rope -> Rope
+wrap' margin =
+    mconcat . intersperse "  \n" . fmap (wrap margin) . breakPieces isLineSeparator
+  where
+    isLineSeparator = (== '\x2028')
 
 headingToMarkdown :: Int -> [Inline] -> Rope
 headingToMarkdown level inlines =
@@ -79,13 +102,10 @@ headingToMarkdown level inlines =
         n -> intoRope (replicate n '#') <> " " <> text <> "\n"
 
 codeToMarkdown :: Attr -> String -> Rope
-codeToMarkdown (_,tags,_) literal =
+codeToMarkdown attr literal =
   let
     body = intoRope literal
-    lang = case tags of
-        []      -> ""
-        [tag]   -> intoRope tag
-        _       -> impureThrow (NotSafe "A code block can't have mulitple langage tags")
+    lang = fencedAttributesToMarkdown attr
   in
     "```" <> lang <> "\n" <>
     body <> "\n" <>
@@ -117,35 +137,95 @@ orderedlistToMarkdown margin (num,style,delim) blockss =
     intoMarkers = fmap pad . fmap intoRope . orderedListMarkers
     pad text = text <> if widthRope text > 2 then " " else "  "
 
+definitionlistToMarkdown :: Int -> [([Inline],[[Block]])] -> Rope
+definitionlistToMarkdown margin definitions =
+    case definitions of
+        [] -> emptyRope
+        (definition1:definitionN) -> handleDefinition definition1 <> foldl'
+            (\text definition -> text <> "\n" <> handleDefinition definition) emptyRope definitionN
+  where
+    handleDefinition :: ([Inline],[[Block]]) -> Rope
+    handleDefinition (term,blockss) =
+        inlinesToMarkdown term <> "\n\n" <> listToMarkdown (repeat ":   ") margin blockss
+
+
 listToMarkdown :: [Rope] -> Int -> [[Block]] -> Rope
 listToMarkdown markers margin items =
-  case pairs of
-    [] -> emptyRope
-    ((marker1,blocks1):pairsN) -> listitem marker1 blocks1 <> foldl'
-        (\text (markerN,blocksN) -> text <> spacer blocksN <> listitem markerN blocksN) emptyRope pairsN
+    case pairs of
+        [] -> emptyRope
+        ((marker1,blocks1):pairsN) -> listitem marker1 blocks1 <> foldl'
+            (\text (markerN,blocksN) -> text <> spacer blocksN <> listitem markerN blocksN) emptyRope pairsN
   where
     pairs = zip markers items
 
     listitem :: Rope -> [Block] -> Rope
     listitem _ [] = emptyRope
-    listitem marker (block1:blocks) = indent marker True block1 <> foldl'
-        (\ text blockN -> text <> indent marker False blockN) emptyRope blocks
+    listitem marker blocks = indent marker blocks
 
+{-
+Tricky. Tight lists are represented by Plain, whereas more widely spaced
+lists are represented by Para. A complex block (specifically a nested
+list!) will handle its own spacing. This seems fragile.
+-}
     spacer :: [Block] -> Rope
     spacer [] = emptyRope
     spacer (block:_) = case block of
         Plain _ -> emptyRope
         Para _  -> "\n"
-        _       -> "\n"
+        _       -> emptyRope -- ie nested list
 
-    indent :: Rope -> Bool -> Block -> Rope
-    indent marker first =
-        snd . foldl' (f marker) (first,emptyRope) . breakLines . convertBlock (margin - 4)
+    indent :: Rope -> [Block] -> Rope
+    indent marker =
+        snd . foldl' (f marker) (True,emptyRope) . breakLines . blocksToMarkdown (margin - 4)
 
     f :: Rope -> (Bool,Rope) -> Rope -> (Bool,Rope)
-    f marker (first,text) line = if first
-        then (False,text <> marker <> line <> "\n")
-        else (False,text <> "    " <> line <> "\n")
+    f marker (first,text) line
+        | nullRope line =
+            (False,text <> "\n") -- don't indent lines that should be blank
+        | otherwise =
+            if first
+                then (False,text <> marker <> line <> "\n")
+                else (False,text <> "    " <> line <> "\n")
+
+{-
+In Pandoc flavoured Markdown, <div> are recognized as valid Markdown via
+the `native_divs` extension. We turn that off, in favour of the
+`fenced_divs` extension, three (or more) colons
+
+    ::: {#identifier .class key=value}
+    Content
+    :::
+
+-}
+divToMarkdown :: Int -> Attr -> [Block] -> Rope
+divToMarkdown margin attr blocks =
+  let
+    first = ":::" <> fencedAttributesToMarkdown attr
+    trail = ":::"
+    content = mconcat . intersperse "\n" . fmap (convertBlock margin)
+  in
+    first <> "\n" <> content blocks <> trail <> "\n"
+
+-- special case for (notably) code blocks where a single class doesn't need braces.
+fencedAttributesToMarkdown :: Attr -> Rope
+fencedAttributesToMarkdown ("", [], []) = emptyRope
+fencedAttributesToMarkdown ("", [single], []) = intoRope single
+fencedAttributesToMarkdown (identifier, [], []) = " " <> attributesToMarkdown (identifier, [], [])
+fencedAttributesToMarkdown (identifier, classes, pairs) = " " <> attributesToMarkdown (identifier, classes, pairs)
+
+-- present attributes, used by both fenced blocks and inline spans
+attributesToMarkdown :: Attr -> Rope
+attributesToMarkdown ("", [], []) = emptyRope
+attributesToMarkdown (identifier, [], []) = "{#" <> intoRope identifier <> "}"
+attributesToMarkdown (identifier, classes, pairs) =
+  let
+    i = if null identifier
+        then emptyRope
+        else "#" <> intoRope identifier <> " "
+    cs = fmap (\c -> "." <> intoRope c) classes
+    ps = fmap (\ (k,v) -> intoRope k <> "=" <> intoRope v) pairs
+  in
+    "{" <> i <> mconcat (intersperse " " (cs ++ ps)) <> "}"
 
 
 tableToMarkdown
@@ -311,17 +391,40 @@ convertInline inline =
     msg = "Unfinished inline: " ++ show inline
   in case inline of
     Space -> " "
-    Str string -> intoRope string
+    Str string -> stringToMarkdown string
     Emph inlines -> "_" <> inlinesToMarkdown inlines <> "_"
     Strong inlines -> "**" <> inlinesToMarkdown inlines <> "**"
     SoftBreak -> " "
-    LineBreak -> "-~<{BR}>~-" -- FIXME
+    LineBreak -> "\x2028"
     Image _ inlines (url, _) -> imageToMarkdown inlines url
     Code _ string -> "`" <> intoRope string <> "`"
     RawInline (Format "tex") string -> intoRope string
+    RawInline (Format "html") string -> intoRope string
+    RawInline _ _ -> error msg
     Link ("",["uri"],[]) _ (url, _) -> uriToMarkdown url
-    Link _ inlines (url, _) -> linkToMarkdown inlines url
+    Link attr inlines (url, title) -> linkToMarkdown attr inlines url title
+    Strikeout inlines -> "~~" <> inlinesToMarkdown inlines <> "~~"
+    Math mode string -> mathToMarkdown mode string
+    -- then things start getting weird
+    SmallCaps inlines -> smallcapsToMarkdown inlines
+    Subscript inlines -> "~" <> inlinesToMarkdown inlines <> "~"
+    Superscript inlines -> "^" <> inlinesToMarkdown inlines <> "^"
+    Span attr inlines -> spanToMarkdown attr inlines
+    -- I don't know what the point of these ones are
+    Quoted SingleQuote inlines -> "'" <> inlinesToMarkdown inlines <> "'"
+    Quoted DoubleQuote inlines -> "\"" <> inlinesToMarkdown inlines <> "\""
     _ -> error msg
+
+{-
+Pandoc uses U+00A0 aka ASCII 160 aka &nbsp; to mark a non-breaking space, which
+seems to be how it describes an escaped space in Markdown. So scan for these
+and replace the escaped space on output.
+-}
+stringToMarkdown :: String -> Rope
+stringToMarkdown =
+    mconcat . intersperse "\\ " . breakPieces isNonBreaking . intoRope
+  where
+    isNonBreaking c = c == '\x00a0'
 
 imageToMarkdown :: [Inline] -> String -> Rope
 imageToMarkdown inlines url =
@@ -338,11 +441,31 @@ uriToMarkdown url =
   in
     "<" <> target <> ">"
 
-linkToMarkdown :: [Inline] -> String -> Rope
-linkToMarkdown inlines url =
+linkToMarkdown :: Attr -> [Inline] -> String ->  String -> Rope
+linkToMarkdown attr inlines url title =
   let
     text = inlinesToMarkdown inlines
-    target = intoRope url
+    target = case title of
+        [] -> intoRope url
+        _  -> intoRope url <> " \"" <> intoRope title <> "\""
   in
-    "[" <> text <> "](" <> target <> ")"
+    "[" <> text <> "](" <> target <> ")" <> attributesToMarkdown attr
 
+-- is there more to this?
+mathToMarkdown :: MathType -> String -> Rope
+mathToMarkdown (InlineMath) math = "$" <> intoRope math <> "$"
+mathToMarkdown (DisplayMath) math = "$$" <> intoRope math <> "$$"
+
+smallcapsToMarkdown :: [Inline] -> Rope
+smallcapsToMarkdown inlines =
+  let
+    text = inlinesToMarkdown inlines
+  in
+    "[" <> text <> "]{.smallcaps}"
+
+spanToMarkdown :: Attr -> [Inline] -> Rope
+spanToMarkdown attr inlines =
+  let
+    text = inlinesToMarkdown inlines
+  in
+    "[" <> text <> "]" <> attributesToMarkdown attr

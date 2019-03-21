@@ -1,5 +1,5 @@
 name: publish
-version:  0.4.1
+version:  0.4.3
 synopsis: Publishing tools for papers, books, and presentations
 description: |
   Tools for rendering markdown-centric documents into PDFs.
@@ -35,7 +35,7 @@ dependencies:
  - template-haskell
  - text
  - typed-process
- - unbeliever >= 0.9.1
+ - unbeliever >= 0.9.3.2
  - unix
  - unordered-containers
 
@@ -62,17 +62,6 @@ executables:
      - PandocToMarkdown
 
 tests:
-  experiment:
-    dependencies:
-     - unbeliever
-    source-dirs:
-     - tests
-     - src
-    main: ReformatTest.hs
-    other-modules:
-     - FormatDocument
-     - PandocToMarkdown
-
   check:
     dependencies:
      - hspec

@@ -15,4 +15,3 @@ Normal text
 #### Fourth level heading
 
 Normal text
-

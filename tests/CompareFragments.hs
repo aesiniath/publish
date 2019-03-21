@@ -19,12 +19,16 @@ fragments =
     [ ("headings",      "tests/fragments/Headings.markdown")
     , ("paragraphs",    "tests/fragments/Paragraphs.markdown")
     , ("code blocks",   "tests/fragments/CodeBlocks.markdown")
+    , ("div blocks",    "tests/fragments/DivBlocks.markdown")
     , ("LaTeX blocks",  "tests/fragments/LatexBlocks.markdown")
+    , ("HTML blocks",   "tests/fragments/HtmlBlocks.markdown")
     , ("poem passage",  "tests/fragments/Poetry.markdown")
     , ("blockquotes",   "tests/fragments/Blockquotes.markdown")
-    , ("bulletlist",    "tests/fragments/BulletList.markdown")
-    , ("orderedlist",   "tests/fragments/OrderedList.markdown")
+    , ("bullet list",   "tests/fragments/BulletList.markdown")
+    , ("ordered list",  "tests/fragments/OrderedList.markdown")
+    , ("definition list", "tests/fragments/DefinitionList.markdown")
     , ("multiline table", "tests/fragments/MultilineTable.markdown")
+    , ("weird inlines", "tests/fragments/WeirdInlines.markdown")
     ]
 
 checkByComparingFragments :: Spec

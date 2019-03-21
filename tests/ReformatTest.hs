@@ -12,7 +12,7 @@ main = execute $ do
     setVerbosityLevel Debug
 
     event "Load fragment"
-    doc <- loadFragment "tests/fragments/MultilineTable.markdown"
+    doc <- loadFragment "tests/fragments/OrderedList.markdown"
     debugS "doc" doc
 
     event "Convert..."
