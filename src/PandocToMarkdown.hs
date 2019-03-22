@@ -396,13 +396,13 @@ convertInline inline =
     Strong inlines -> "**" <> inlinesToMarkdown inlines <> "**"
     SoftBreak -> " "
     LineBreak -> "\x2028"
-    Image _ inlines (url, _) -> imageToMarkdown inlines url
+    Image attr inlines target -> imageToMarkdown attr inlines target
     Code _ string -> "`" <> intoRope string <> "`"
     RawInline (Format "tex") string -> intoRope string
     RawInline (Format "html") string -> intoRope string
     RawInline _ _ -> error msg
     Link ("",["uri"],[]) _ (url, _) -> uriToMarkdown url
-    Link attr inlines (url, title) -> linkToMarkdown attr inlines url title
+    Link attr inlines target -> linkToMarkdown attr inlines target
     Strikeout inlines -> "~~" <> inlinesToMarkdown inlines <> "~~"
     Math mode string -> mathToMarkdown mode string
     -- then things start getting weird
@@ -426,13 +426,15 @@ stringToMarkdown =
   where
     isNonBreaking c = c == '\x00a0'
 
-imageToMarkdown :: [Inline] -> String -> Rope
-imageToMarkdown inlines url =
+imageToMarkdown :: Attr -> [Inline] -> (String,String) -> Rope
+imageToMarkdown attr inlines (url,title) =
   let
-    text = inlinesToMarkdown inlines
-    target = intoRope url
+    alt = inlinesToMarkdown inlines
+    target = case title of
+        [] -> intoRope url
+        _  -> intoRope url <> " \"" <> intoRope title <> "\""
   in
-    "![" <> text <> "](" <> target <> ")"
+    "![" <> alt <> "](" <> target <> ")" <> attributesToMarkdown attr
     
 uriToMarkdown :: String -> Rope
 uriToMarkdown url =
@@ -441,8 +443,8 @@ uriToMarkdown url =
   in
     "<" <> target <> ">"
 
-linkToMarkdown :: Attr -> [Inline] -> String ->  String -> Rope
-linkToMarkdown attr inlines url title =
+linkToMarkdown :: Attr -> [Inline] -> (String,String) -> Rope
+linkToMarkdown attr inlines (url,title) =
   let
     text = inlinesToMarkdown inlines
     target = case title of

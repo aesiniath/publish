@@ -16,8 +16,8 @@ import qualified Data.Text as T (Text)
 import qualified Data.Text.IO as T
 import System.IO (withFile, IOMode(..))
 import Text.Pandoc (runIOorExplode, readMarkdown, def
-    , readerExtensions, pandocExtensions, disableExtension, Extension(..)
-    , Pandoc)
+    , ReaderOptions(readerExtensions), pandocExtensions, disableExtension
+    , Extension(..), Pandoc, Extensions)
 
 import PandocToMarkdown
 
@@ -55,9 +55,15 @@ loadFragment file =
 markdownToPandoc :: T.Text -> IO Pandoc
 markdownToPandoc contents =
   let
-    extensions = disableExtension Ext_smart pandocExtensions
+    disableFrom :: Extensions -> [Extension] -> Extensions
+    disableFrom extensions list = foldr disableExtension extensions list
+
     readingOptions = def
-        { readerExtensions = extensions
+        { readerExtensions = disableFrom pandocExtensions
+            [ Ext_implicit_figures
+            , Ext_shortcut_reference_links
+            , Ext_smart
+            ]
         }
   in do
     runIOorExplode $ do
