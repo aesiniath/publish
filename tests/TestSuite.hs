@@ -2,8 +2,9 @@
 
 import Test.Hspec
 
-import Core.System
+import CheckBookfileParser
 import CheckTableProperties
+import Core.System
 import CompareFragments
 
 main :: IO ()
@@ -14,3 +15,4 @@ suite :: Spec
 suite = do
     checkTableProperties
     checkByComparingFragments
+    checkBookfileParser
