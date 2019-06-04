@@ -7,7 +7,6 @@ module CheckBookfileParser
     )
 where
 
-import Core.System
 import Core.Text
 import Test.Hspec
 import Text.Megaparsec
@@ -18,16 +17,16 @@ checkBookfileParser :: Spec
 checkBookfileParser = do
     describe "Parse magic line" $ do
         it "correctly parses a complete first line" $ do
-            parseMaybe parseMagicLine "% publish v0" `shouldBe` Just 0
+            parseMaybe parseMagicLine "% publish v2" `shouldBe` Just 2
         it "errors if missing syntax" $ do
             parseMaybe parseMagicLine "%" `shouldBe` Nothing
             parseMaybe parseMagicLine "%publish" `shouldBe` Nothing
             parseMaybe parseMagicLine "% publish" `shouldBe` Nothing
             parseMaybe parseMagicLine "% publish " `shouldBe` Nothing
             parseMaybe parseMagicLine "% publish v" `shouldBe` Nothing
-            parseMaybe parseMagicLine "% publish  v0" `shouldBe` Nothing
+            parseMaybe parseMagicLine "% publish  v2" `shouldBe` Nothing
             parseMaybe parseMagicLine "% publish v1" `shouldBe` Nothing
-            parseMaybe parseMagicLine "% publish v0 asdf" `shouldBe` Nothing
+            parseMaybe parseMagicLine "% publish v2 asdf" `shouldBe` Nothing
 
     describe "Parse fragment lines" $ do
         it "correctly parses a preamble line" $ do
@@ -43,3 +42,14 @@ one.markdown
 two.markdown
             |]
                 `shouldBe` Just (["one.markdown", "two.markdown"] :: [FilePath])
+
+    describe "Complete document" $ do
+        it "correctly parses a complete bookfile" $ do
+            parseMaybe parseBookfile [quote|
+% publish v2
+preamble.latex
+% begin
+Introduction.markdown
+Conclusion.markdown
+% end
+            |] `shouldBe` Just (Bookfile 2 ["preamble.latex"] ["Introduction.markdown", "Conclusion.markdown"])

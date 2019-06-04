@@ -16,7 +16,7 @@ data Bookfile = Bookfile
     { bookfileVersion :: Int
     , bookfilePreambles :: [FilePath]
     , bookfileFragments :: [FilePath]
-    } deriving Show
+    } deriving (Show, Eq)
 
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme (L.space space1 empty empty)
@@ -27,7 +27,8 @@ parseFileLine = do
     file <- takeWhile1P (Just "line containing a filename") (/= '\n')
     return file
 
-__VERSION__ = 0
+__VERSION__ :: Int
+__VERSION__ = 2
 
 parseMagicLine :: Parser Int
 parseMagicLine = do
@@ -43,13 +44,13 @@ parseMagicLine = do
 --  void (many newline) 
 
 parseBeginLine :: Parser ()
-parseBeginLine = dbg "begin" $ try $ label "begin marker" $ do
+parseBeginLine = try $ label "begin marker" $ do
     void (string "% begin")
     void newline
     return ()
 
 parseEndLine :: Parser ()
-parseEndLine = dbg "endin" $ try $ label "end marker" $ do
+parseEndLine = try $ label "end marker" $ do
     void (string "% end")
     void newline
 
