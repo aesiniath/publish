@@ -54,7 +54,7 @@ parseBookfile = do
     fragments <- many (parseBlank *> parseFileLine <* parseBlank)
     parseEndLine
     return Bookfile
-        { bookfileVersionFrom = version
-        , bookfilePreamblesFrom = preambles
-        , bookfileFragmentsFrom = fragments
+        { versionFrom = version
+        , preamblesFrom = preambles
+        , fragmentsFrom = fragments
         }

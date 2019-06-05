@@ -22,7 +22,7 @@ initial = do
     return (Env cwd [] "/dev/null" "/dev/null" "/dev/null")
 
 data Bookfile = Bookfile
-    { bookfileVersionFrom :: Int
-    , bookfilePreamblesFrom :: [FilePath]
-    , bookfileFragmentsFrom :: [FilePath]
+    { versionFrom :: Int
+    , preamblesFrom :: [FilePath]
+    , fragmentsFrom :: [FilePath]
     } deriving (Show, Eq)

@@ -52,6 +52,7 @@ executables:
      - NotifyChanges
      - LatexOutputReader
      - PandocToMarkdown
+     - ParseBookfile
      - RenderDocument
      - Utilities
 

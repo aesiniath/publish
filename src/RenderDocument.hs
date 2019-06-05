@@ -12,8 +12,6 @@ import Core.System
 import Core.Text
 import Data.Char (isSpace)
 import qualified Data.List as List (dropWhileEnd)
-import Data.Text (Text)
-import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import System.Directory (doesFileExist, doesDirectoryExist
     , copyFileWithMetadata)
@@ -25,14 +23,16 @@ import System.IO.Error (userError, IOError)
 import System.Posix.Directory (changeWorkingDirectory)
 import System.Posix.Temp (mkdtemp)
 import System.Posix.User (getEffectiveUserID, getEffectiveGroupID)
+import Text.Megaparsec (runParser, errorBundlePretty)
 import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
     , readerExtensions, readerColumns, pandocExtensions
     , writerTopLevelDivision, TopLevelDivision(TopLevelChapter))
 
-import Environment (Env(..))
+import Environment (Env(..), Bookfile(..))
 import NotifyChanges (waitForChange)
 import LatexPreamble (preamble, ending)
 import LatexOutputReader (parseOutputForError)
+import ParseBookfile (parseBookfile)
 import Utilities (ensureDirectory, execProcess, ifNewer, isNewer)
 
 data Mode = Once | Cycle
@@ -176,16 +176,17 @@ setupTargetFile book = do
 
 processBookFile :: FilePath -> Program Env [FilePath]
 processBookFile file = do
-    contents <- liftIO (T.readFile file)
-    list <- filterM skipNotFound (possibilities contents)
+    contents <- liftIO (readFile file)
+    let result = runParser parseBookfile file contents
+    bookfile <- case result of
+        Left err -> do
+            write (intoRope (errorBundlePretty err))
+            terminate 1
+        Right value -> return value
+    list <- filterM skipNotFound (fragmentsFrom bookfile)
     debugS "fragments" (length list)
     return list
   where
-    -- filter out blank lines and lines commented out
-    possibilities :: Text -> [FilePath]
-    possibilities = map T.unpack . filter (not . T.null)
-        . filter (not . T.isPrefixOf "#") . T.lines
-
     skipNotFound :: FilePath -> Program t Bool
     skipNotFound fragment = do
         probe <- liftIO (doesFileExist fragment)
