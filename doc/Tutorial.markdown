@@ -27,7 +27,10 @@ to render. Create another file which lists the pieces of your manuscript,
 one per line. Here we've only got one fragment, so this won't take long:
 
 ```text
+% publish v2
+% begin
 Introduction.markdown
+% end
 ```
 
 Put the list into a file named _Trees.book_. The filename extension does
@@ -84,9 +87,12 @@ memoirs. They should put their preamble as the first item in the bookfile,
 perhaps:
 
 ```
+% publish v2
 preamble.latex
+% begin
 Introduction.markdown
 ending.latex
+% end
 ```
 
 Docker integration

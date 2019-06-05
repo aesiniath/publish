@@ -8,7 +8,9 @@ A work with multiple chapters and images in different subdirectories could
 be described as follows
 
 ```
+% publish v2
 preamble.latex
+% begin
 chapters/Introduction.markdown
 chapters/RelatedWork.markdown
 chapters/Results.latex
@@ -16,7 +18,7 @@ chapters/chart-07.svg
 chapters/Analysis.markdown
 chapters/Conclusion.markdown
 generated/References.latex
-ending.latex
+% end
 ```
 
 If you put that list into _EnormousThesis.book_ in the current directory it
