@@ -50,7 +50,7 @@ executables:
      - Environment
      - LatexPreamble
      - NotifyChanges
-     - OutputParser
+     - LatexOutputReader
      - PandocToMarkdown
      - RenderDocument
      - Utilities

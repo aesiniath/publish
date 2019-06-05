@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module OutputParser
+module LatexOutputReader
     ( parseOutputForError
     )
 where

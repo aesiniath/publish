@@ -32,7 +32,7 @@ import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
 import Environment (Env(..))
 import NotifyChanges (waitForChange)
 import LatexPreamble (preamble, ending)
-import OutputParser (parseOutputForError)
+import LatexOutputReader (parseOutputForError)
 import Utilities (ensureDirectory, execProcess, ifNewer, isNewer)
 
 data Mode = Once | Cycle
