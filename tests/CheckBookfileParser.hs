@@ -11,6 +11,7 @@ import Core.Text
 import Test.Hspec
 import Text.Megaparsec
 
+import Environment (Bookfile(..))
 import ParseBookfile
 
 checkBookfileParser :: Spec

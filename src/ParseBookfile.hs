@@ -4,17 +4,12 @@ import Control.Monad
 import Data.Void
 import Text.Megaparsec
 import Text.Megaparsec.Char
-import Text.Megaparsec.Debug
 import qualified Text.Megaparsec.Char.Lexer as L
+
+import Environment (Bookfile(..))
 
 -- use String, since we need FilePaths which are type aliases over String anyway.
 type Parser = Parsec Void String
-
-data Bookfile = Bookfile
-    { bookfileVersion :: Int
-    , bookfilePreambles :: [FilePath]
-    , bookfileFragments :: [FilePath]
-    } deriving (Show, Eq)
 
 __VERSION__ :: Int
 __VERSION__ = 2
@@ -59,7 +54,7 @@ parseBookfile = do
     fragments <- many (parseBlank *> parseFileLine <* parseBlank)
     parseEndLine
     return Bookfile
-        { bookfileVersion = version
-        , bookfilePreambles = preambles
-        , bookfileFragments = fragments
+        { bookfileVersionFrom = version
+        , bookfilePreamblesFrom = preambles
+        , bookfileFragmentsFrom = fragments
         }
