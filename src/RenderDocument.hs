@@ -76,6 +76,8 @@ renderDocument mode file = do
     event "Convert document fragments to LaTeX"
     mapM_ processFragment fragments
 
+    setupEndingFile
+
     event "Write intermediate LaTeX file"
     produceResult
 
@@ -225,14 +227,30 @@ setupBeginningFile = do
     let tmpdir = tempDirectoryFrom env
         files = intermediateFilenamesFrom env
 
-    begin <- do
+    file <- do
         let name = "99_Beginning.latex"
         let target = tmpdir ++ "/" ++ name
         liftIO $ withFile target WriteMode $ \handle -> do
             hWrite handle beginning
         return name
 
-    let env' = env { intermediateFilenamesFrom = begin : files }
+    let env' = env { intermediateFilenamesFrom = file : files }
+    setApplicationState env'
+
+setupEndingFile :: Program Env ()
+setupEndingFile = do
+    env <- getApplicationState
+    let tmpdir = tempDirectoryFrom env
+        files = intermediateFilenamesFrom env
+
+    file <- do
+        let name = "ZZ_Ending.latex"
+        let target = tmpdir ++ "/" ++ name
+        liftIO $ withFile target WriteMode $ \handle -> do
+            hWrite handle ending
+        return name
+
+    let env' = env { intermediateFilenamesFrom = file : files }
     setApplicationState env'
 
 processBookFile :: FilePath -> Program Env Bookfile
@@ -403,25 +421,13 @@ Finish up by writing the intermediate "master" file.
 produceResult :: Program Env ()
 produceResult = do
     env <- getApplicationState
-    let tmpdir = tempDirectoryFrom env
-        master = masterFilenameFrom env
+    let master = masterFilenameFrom env
         files = intermediateFilenamesFrom env
-
-    params <- getCommandLine
-    files' <- case lookupOptionFlag "builtin-preamble" params of
-        Nothing     -> return files
-        Just True   -> do
-            let name = "ZZ_Ending.latex"
-            let target = tmpdir ++ "/" ++ name
-            liftIO $ withFile target WriteMode $ \handle -> do
-                hWrite handle ending
-            return (name:files)
-        Just _      -> invalid
 
     debugS "master" master
     liftIO $ withFile master WriteMode $ \handle -> do
         hPutStrLn handle ("\\RequirePackage{import}")
-        forM_ (reverse files') $ \file -> do
+        forM_ (reverse files) $ \file -> do
             let (path,name) = splitFileName file
             hPutStrLn handle ("\\subimport{" ++ path ++ "}{" ++ name ++ "}")
 
