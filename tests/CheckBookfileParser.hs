@@ -16,10 +16,10 @@ import ParseBookfile
 
 checkBookfileParser :: Spec
 checkBookfileParser = do
-    describe "Parse magic line" $ do
-        it "correctly parses a complete first line" $ do
+    describe "Parse bookfile format" $ do
+        it "Correctly parses a complete first line" $ do
             parseMaybe parseMagicLine "% publish v2" `shouldBe` Just 2
-        it "errors if missing syntax" $ do
+        it "Errors if first line has incorrect syntax" $ do
             parseMaybe parseMagicLine "%" `shouldBe` Nothing
             parseMaybe parseMagicLine "%publish" `shouldBe` Nothing
             parseMaybe parseMagicLine "% publish" `shouldBe` Nothing
@@ -29,14 +29,13 @@ checkBookfileParser = do
             parseMaybe parseMagicLine "% publish v1" `shouldBe` Nothing
             parseMaybe parseMagicLine "% publish v2 asdf" `shouldBe` Nothing
 
-    describe "Parse fragment lines" $ do
-        it "correctly parses a preamble line" $ do
+        it "Correctly parses a preamble line" $ do
             parseMaybe parseFileLine "preamble.latex" `shouldBe` Just "preamble.latex"
-        it "parses two filenames in a list" $ do
+        it "Parses two filenames in a list" $ do
             parseMaybe (many (parseFileLine <* parseBlank)) "one.markdown\ntwo.markdown"
                 `shouldBe` Just (["one.markdown", "two.markdown"] :: [FilePath])
 
-        it "parses two filenames with a blank line between them" $ do
+        it "Parses two filenames with a blank line between them" $ do
             parseMaybe (many (parseFileLine <* parseBlank)) [quote|
 one.markdown
 
