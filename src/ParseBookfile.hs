@@ -23,13 +23,13 @@ parseMagicLine = do
     void (char 'v') <?> "the character v and then a number"
     v <- L.decimal <?> "the bookfile schema version number"
     unless (v == __VERSION__) (fail ("currently recognized bookfile schema version is v" ++ show __VERSION__))
+    void newline
     return v
 
 parseBeginLine :: Parser ()
 parseBeginLine = try $ label "begin marker" $ do
     void (string "% begin")
     void newline
-    return ()
 
 parseFileLine :: Parser FilePath
 parseFileLine = do
