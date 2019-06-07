@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module RenderDocument
     ( program
@@ -11,7 +12,8 @@ import Core.Program
 import Core.System
 import Core.Text
 import Data.Char (isSpace)
-import qualified Data.List as List (dropWhileEnd)
+import qualified Data.List as List (dropWhileEnd, null)
+import Data.Maybe (isJust)
 import qualified Data.Text.IO as T
 import System.Directory (doesFileExist, doesDirectoryExist
     , copyFileWithMetadata)
@@ -62,6 +64,7 @@ renderDocument mode file = do
     event "Setup temporary directory"
     setupTargetFile file
     setupPreambleFile
+    validatePreamble book
 
     let preambles = preamblesFrom book
     let fragments = fragmentsFrom book
@@ -191,7 +194,32 @@ setupPreambleFile = do
     let env' = env { intermediateFilenamesFrom = first }
     setApplicationState env'
 
-setupBeginningFile ::Program Env ()
+{-
+This could do a lot more; checking to see if \documentclass is present, for
+example. At present this covers the (likely common) failure mode of
+specifying neither -p nor a preamble in the bookfile.
+-}
+validatePreamble :: Bookfile -> Program Env ()
+validatePreamble book = do
+    params <- getCommandLine
+    let preambles = preamblesFrom book
+    let builtin = isJust (lookupOptionFlag "builtin-preamble" params)
+
+    if List.null preambles && not builtin
+        then do
+            write "error: no preamble\n"
+            let msg :: Rope = [quote|
+You need to either a) put the name of the file including the LaTeX
+preamble for your document in the .book file between the "% publish"
+and "% begin" lines, or b) specify the --builtin-preamble option on
+the command-line when running this program.
+|]
+            writeR msg
+            terminate 2
+        else
+            return ()
+
+setupBeginningFile :: Program Env ()
 setupBeginningFile = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
@@ -206,8 +234,6 @@ setupBeginningFile = do
 
     let env' = env { intermediateFilenamesFrom = begin : files }
     setApplicationState env'
-
-
 
 processBookFile :: FilePath -> Program Env Bookfile
 processBookFile file = do
