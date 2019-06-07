@@ -47,7 +47,7 @@ two.markdown
             parseMaybe parseBeginLine "% begin\n" `shouldBe` Just ()
             parseMaybe parseEndLine "% end\n" `shouldBe` Just ()
 
-        it "correctly parses a complete bookfile" $ do
+        it "Correctly parses a complete bookfile" $ do
             parseMaybe parseBookfile [quote|
 % publish v2
 preamble.latex
@@ -57,7 +57,7 @@ Conclusion.markdown
 % end
             |] `shouldBe` Just (Bookfile 2 ["preamble.latex"] ["Introduction.markdown", "Conclusion.markdown"])
 
-        it "correctly parses a complete bookfile with no preamble" $ do
+        it "Correctly parses a complete bookfile with no preamble" $ do
             parseMaybe parseBookfile [quote|
 % publish v2
 % begin

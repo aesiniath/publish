@@ -120,7 +120,7 @@ First                   Second                  Third
 -----------------------------------------------------------------------
             |]
 
-        it "a minimal complete example reformats properly" $
+        it "A minimal complete example reformats properly" $
           let
             table = [quote|
 | First | Second | Third |
