@@ -73,9 +73,12 @@ tests:
      - tests
     main: TestSuite.hs
     other-modules:
+     - CheckBookfileParser
      - CheckTableProperties
      - CompareFragments
+     - Environment
      - FormatDocument
      - PandocToMarkdown
-
+     - ParseBookfile
+ 
 
