@@ -30,7 +30,7 @@ import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
 
 import Environment (Env(..), Bookfile(..))
 import NotifyChanges (waitForChange)
-import LatexPreamble (preamble, ending)
+import LatexPreamble (preamble, beginning, ending)
 import LatexOutputReader (parseOutputForError)
 import ParseBookfile (parseBookfile)
 import Utilities (ensureDirectory, execProcess, ifNewer, isNewer)
@@ -55,15 +55,23 @@ program = do
 
 
 renderDocument :: Mode -> FilePath -> Program Env [FilePath]
-renderDocument mode bookfile = do
+renderDocument mode file = do
     event "Read .book file"
-    files <- processBookFile bookfile
+    book <- processBookFile file
 
     event "Setup temporary directory"
-    setupTargetFile bookfile
+    setupTargetFile file
+    setupPreambleFile
+
+    let preambles = preamblesFrom book
+    let fragments = fragmentsFrom book
+
+    event "Convert preamble and begin fragments to LaTeX"
+    mapM_ processFragment preambles
+    setupBeginningFile
 
     event "Convert document fragments to LaTeX"
-    mapM_ processFragment files
+    mapM_ processFragment fragments
 
     event "Write intermediate LaTeX file"
     produceResult
@@ -79,7 +87,8 @@ renderDocument mode bookfile = do
             Cycle -> return ()
         )
 
-    return (bookfile:files)
+    -- question: original lists or filtered ones?
+    return (file : preambles ++ fragments)
 
 
 extractMode :: Parameters -> Program Env Mode
@@ -117,7 +126,7 @@ extractBookFile params =
 
 
 setupTargetFile :: FilePath -> Program Env ()
-setupTargetFile book = do
+setupTargetFile file = do
     env <- getApplicationState
     let start = startingDirectoryFrom env
     let dotfile = start ++ "/.target"
@@ -148,44 +157,76 @@ setupTargetFile book = do
     let master = tmpdir ++ "/" ++ base ++ ".tex"
         result = tmpdir ++ "/" ++ base ++ ".pdf"
 
-    first <- case lookupOptionFlag "builtin-preamble" params of
-        Nothing     -> return []
-        Just True   -> do
-            let name = "00_Beginning.latex"
-            let target = tmpdir ++ "/" ++ name
-            liftIO $ withFile target WriteMode $ \handle -> do
-                hWrite handle preamble
-            return [name]
-        Just _      -> invalid
-
     let env' = env
-            { intermediateFilenamesFrom = first
+            { intermediateFilenamesFrom = []
             , masterFilenameFrom = master
             , resultFilenameFrom = result
             , tempDirectoryFrom = tmpdir
             }
     setApplicationState env'
   where
-    base = takeBaseName book -- "/directory/file.ext" -> "file"
+    base = takeBaseName file -- "/directory/file.ext" -> "file"
 
     boom = userError "Temp dir no longer present"
 
     trim :: String -> String
     trim = List.dropWhileEnd isSpace
 
+setupPreambleFile :: Program Env ()
+setupPreambleFile = do
+    env <- getApplicationState
+    let tmpdir = tempDirectoryFrom env
 
-processBookFile :: FilePath -> Program Env [FilePath]
+    params <- getCommandLine
+    first <- case lookupOptionFlag "builtin-preamble" params of
+        Nothing     -> return []
+        Just True   -> do
+            let name = "00_Preamble.latex"
+            let target = tmpdir ++ "/" ++ name
+            liftIO $ withFile target WriteMode $ \handle -> do
+                hWrite handle preamble
+            return [name]
+        Just _      -> invalid
+
+    let env' = env { intermediateFilenamesFrom = first }
+    setApplicationState env'
+
+setupBeginningFile ::Program Env ()
+setupBeginningFile = do
+    env <- getApplicationState
+    let tmpdir = tempDirectoryFrom env
+        files = intermediateFilenamesFrom env
+
+    begin <- do
+        let name = "99_Beginning.latex"
+        let target = tmpdir ++ "/" ++ name
+        liftIO $ withFile target WriteMode $ \handle -> do
+            hWrite handle beginning
+        return name
+
+    let env' = env { intermediateFilenamesFrom = begin : files }
+    setApplicationState env'
+
+
+
+processBookFile :: FilePath -> Program Env Bookfile
 processBookFile file = do
     contents <- liftIO (readFile file)
+
     let result = runParser parseBookfile file contents
     bookfile <- case result of
         Left err -> do
             write (intoRope (errorBundlePretty err))
             terminate 1
         Right value -> return value
-    list <- filterM skipNotFound (fragmentsFrom bookfile)
-    debugS "fragments" (length list)
-    return list
+
+    list1 <- filterM skipNotFound (preamblesFrom bookfile)
+    debugS "preambles" (length list1)
+
+    list2 <- filterM skipNotFound (fragmentsFrom bookfile)
+    debugS "fragments" (length list2)
+
+    return bookfile { preamblesFrom = list1, fragmentsFrom = list2 }
   where
     skipNotFound :: FilePath -> Program t Bool
     skipNotFound fragment = do
