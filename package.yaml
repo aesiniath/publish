@@ -1,5 +1,5 @@
 name: publish
-version:  0.4.4
+version:  2.0.1
 synopsis: Publishing tools for papers, books, and presentations
 description: |
   Tools for rendering markdown-centric documents into PDFs.
@@ -30,6 +30,7 @@ dependencies:
  - directory
  - filepath
  - hinotify
+ - megaparsec
  - pandoc-types
  - pandoc
  - template-haskell
@@ -49,8 +50,9 @@ executables:
      - Environment
      - LatexPreamble
      - NotifyChanges
-     - OutputParser
+     - LatexOutputReader
      - PandocToMarkdown
+     - ParseBookfile
      - RenderDocument
      - Utilities
 
@@ -71,9 +73,12 @@ tests:
      - tests
     main: TestSuite.hs
     other-modules:
+     - CheckBookfileParser
      - CheckTableProperties
      - CompareFragments
+     - Environment
      - FormatDocument
      - PandocToMarkdown
-
+     - ParseBookfile
+ 
 

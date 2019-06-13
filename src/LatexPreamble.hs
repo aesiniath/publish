@@ -3,6 +3,7 @@
 
 module LatexPreamble
     ( preamble
+    , beginning
     , ending
     )
 where
@@ -22,8 +23,6 @@ preamble = [quote|
 \setmainfont{Linux Libertine O}
 \setsansfont{TeX Gyre Heros}[Scale=MatchLowercase]
 \setmonofont{Inconsolata}[Scale=MatchLowercase]
-
-%\usepackage[showframe, pass]{geometry}
 
 % use upquote for straight quotes in verbatim environments
 \usepackage{upquote}
@@ -90,6 +89,11 @@ preamble = [quote|
 \setsubsecheadstyle{\normalsize\sffamily\bfseries}
 \setsubsubsecheadstyle{\normalsize\rmfamily\itshape}
 
+|]
+
+beginning :: Rope
+beginning = [quote|
+
 %
 % Output from Skylighting.styleToLaTeX
 %
@@ -135,13 +139,16 @@ preamble = [quote|
 \newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
 \newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
 
-\usepackage[normalem]{ulem}
+%
 % avoid problems with \sout in headers with hyperref:
-\pdfstringdefDisableCommands{\renewcommand{\sout}{}}
+%
 
+\usepackage[normalem]{ulem}
+\pdfstringdefDisableCommands{\renewcommand{\sout}{}}
 
 \begin{document}
 |]
+
 
 ending :: Rope
 ending = [quote|

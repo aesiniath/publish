@@ -1,0 +1,11 @@
+% publish v2
+preamble.latex
+% begin
+Introduction.markdown
+RelatedWork.markdown
+Results.latex
+chart-07.svg
+Analysis.markdown
+Conclusion.markdown
+References.latex
+% end

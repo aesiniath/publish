@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module RenderDocument
     ( program
@@ -11,9 +12,8 @@ import Core.Program
 import Core.System
 import Core.Text
 import Data.Char (isSpace)
-import qualified Data.List as List (dropWhileEnd)
-import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.List as List (dropWhileEnd, null)
+import Data.Maybe (isJust)
 import qualified Data.Text.IO as T
 import System.Directory (doesFileExist, doesDirectoryExist
     , copyFileWithMetadata)
@@ -25,14 +25,16 @@ import System.IO.Error (userError, IOError)
 import System.Posix.Directory (changeWorkingDirectory)
 import System.Posix.Temp (mkdtemp)
 import System.Posix.User (getEffectiveUserID, getEffectiveGroupID)
+import Text.Megaparsec (runParser, errorBundlePretty)
 import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
     , readerExtensions, readerColumns, pandocExtensions
     , writerTopLevelDivision, TopLevelDivision(TopLevelChapter))
 
-import Environment (Env(..))
+import Environment (Env(..), Bookfile(..))
 import NotifyChanges (waitForChange)
-import LatexPreamble (preamble, ending)
-import OutputParser (parseOutputForError)
+import LatexPreamble (preamble, beginning, ending)
+import LatexOutputReader (parseOutputForError)
+import ParseBookfile (parseBookfile)
 import Utilities (ensureDirectory, execProcess, ifNewer, isNewer)
 
 data Mode = Once | Cycle
@@ -55,15 +57,26 @@ program = do
 
 
 renderDocument :: Mode -> FilePath -> Program Env [FilePath]
-renderDocument mode bookfile = do
+renderDocument mode file = do
     event "Read .book file"
-    files <- processBookFile bookfile
+    book <- processBookFile file
 
     event "Setup temporary directory"
-    setupTargetFile bookfile
+    setupTargetFile file
+    setupPreambleFile
+    validatePreamble book
+
+    let preambles = preamblesFrom book
+    let fragments = fragmentsFrom book
+
+    event "Convert preamble and begin fragments to LaTeX"
+    mapM_ processFragment preambles
+    setupBeginningFile
 
     event "Convert document fragments to LaTeX"
-    mapM_ processFragment files
+    mapM_ processFragment fragments
+
+    setupEndingFile
 
     event "Write intermediate LaTeX file"
     produceResult
@@ -79,7 +92,8 @@ renderDocument mode bookfile = do
             Cycle -> return ()
         )
 
-    return (bookfile:files)
+    -- question: original lists or filtered ones?
+    return (file : preambles ++ fragments)
 
 
 extractMode :: Parameters -> Program Env Mode
@@ -117,7 +131,7 @@ extractBookFile params =
 
 
 setupTargetFile :: FilePath -> Program Env ()
-setupTargetFile book = do
+setupTargetFile file = do
     env <- getApplicationState
     let start = startingDirectoryFrom env
     let dotfile = start ++ "/.target"
@@ -148,44 +162,116 @@ setupTargetFile book = do
     let master = tmpdir ++ "/" ++ base ++ ".tex"
         result = tmpdir ++ "/" ++ base ++ ".pdf"
 
-    first <- case lookupOptionFlag "builtin-preamble" params of
-        Nothing     -> return []
-        Just True   -> do
-            let name = "00_Beginning.latex"
-            let target = tmpdir ++ "/" ++ name
-            liftIO $ withFile target WriteMode $ \handle -> do
-                hWrite handle preamble
-            return [name]
-        Just _      -> invalid
-
     let env' = env
-            { intermediateFilenamesFrom = first
+            { intermediateFilenamesFrom = []
             , masterFilenameFrom = master
             , resultFilenameFrom = result
             , tempDirectoryFrom = tmpdir
             }
     setApplicationState env'
   where
-    base = takeBaseName book -- "/directory/file.ext" -> "file"
+    base = takeBaseName file -- "/directory/file.ext" -> "file"
 
     boom = userError "Temp dir no longer present"
 
     trim :: String -> String
     trim = List.dropWhileEnd isSpace
 
+setupPreambleFile :: Program Env ()
+setupPreambleFile = do
+    env <- getApplicationState
+    let tmpdir = tempDirectoryFrom env
 
-processBookFile :: FilePath -> Program Env [FilePath]
+    params <- getCommandLine
+    first <- case lookupOptionFlag "builtin-preamble" params of
+        Nothing     -> return []
+        Just True   -> do
+            let name = "00_Preamble.latex"
+            let target = tmpdir ++ "/" ++ name
+            liftIO $ withFile target WriteMode $ \handle -> do
+                hWrite handle preamble
+            return [name]
+        Just _      -> invalid
+
+    let env' = env { intermediateFilenamesFrom = first }
+    setApplicationState env'
+
+{-
+This could do a lot more; checking to see if \documentclass is present, for
+example. At present this covers the (likely common) failure mode of
+specifying neither -p nor a preamble in the bookfile.
+-}
+validatePreamble :: Bookfile -> Program Env ()
+validatePreamble book = do
+    params <- getCommandLine
+    let preambles = preamblesFrom book
+    let builtin = isJust (lookupOptionFlag "builtin-preamble" params)
+
+    if List.null preambles && not builtin
+        then do
+            write "error: no preamble\n"
+            let msg :: Rope = [quote|
+You need to either a) put the name of the file including the LaTeX
+preamble for your document in the .book file between the "% publish"
+and "% begin" lines, or b) specify the --builtin-preamble option on
+the command-line when running this program.
+|]
+            writeR msg
+            terminate 2
+        else
+            return ()
+
+setupBeginningFile :: Program Env ()
+setupBeginningFile = do
+    env <- getApplicationState
+    let tmpdir = tempDirectoryFrom env
+        files = intermediateFilenamesFrom env
+
+    file <- do
+        let name = "99_Beginning.latex"
+        let target = tmpdir ++ "/" ++ name
+        liftIO $ withFile target WriteMode $ \handle -> do
+            hWrite handle beginning
+        return name
+
+    let env' = env { intermediateFilenamesFrom = file : files }
+    setApplicationState env'
+
+setupEndingFile :: Program Env ()
+setupEndingFile = do
+    env <- getApplicationState
+    let tmpdir = tempDirectoryFrom env
+        files = intermediateFilenamesFrom env
+
+    file <- do
+        let name = "ZZ_Ending.latex"
+        let target = tmpdir ++ "/" ++ name
+        liftIO $ withFile target WriteMode $ \handle -> do
+            hWrite handle ending
+        return name
+
+    let env' = env { intermediateFilenamesFrom = file : files }
+    setApplicationState env'
+
+processBookFile :: FilePath -> Program Env Bookfile
 processBookFile file = do
-    contents <- liftIO (T.readFile file)
-    list <- filterM skipNotFound (possibilities contents)
-    debugS "fragments" (length list)
-    return list
-  where
-    -- filter out blank lines and lines commented out
-    possibilities :: Text -> [FilePath]
-    possibilities = map T.unpack . filter (not . T.null)
-        . filter (not . T.isPrefixOf "#") . T.lines
+    contents <- liftIO (readFile file)
 
+    let result = runParser parseBookfile file contents
+    bookfile <- case result of
+        Left err -> do
+            write (intoRope (errorBundlePretty err))
+            terminate 1
+        Right value -> return value
+
+    list1 <- filterM skipNotFound (preamblesFrom bookfile)
+    debugS "preambles" (length list1)
+
+    list2 <- filterM skipNotFound (fragmentsFrom bookfile)
+    debugS "fragments" (length list2)
+
+    return bookfile { preamblesFrom = list1, fragmentsFrom = list2 }
+  where
     skipNotFound :: FilePath -> Program t Bool
     skipNotFound fragment = do
         probe <- liftIO (doesFileExist fragment)
@@ -335,25 +421,13 @@ Finish up by writing the intermediate "master" file.
 produceResult :: Program Env ()
 produceResult = do
     env <- getApplicationState
-    let tmpdir = tempDirectoryFrom env
-        master = masterFilenameFrom env
+    let master = masterFilenameFrom env
         files = intermediateFilenamesFrom env
-
-    params <- getCommandLine
-    files' <- case lookupOptionFlag "builtin-preamble" params of
-        Nothing     -> return files
-        Just True   -> do
-            let name = "ZZ_Ending.latex"
-            let target = tmpdir ++ "/" ++ name
-            liftIO $ withFile target WriteMode $ \handle -> do
-                hWrite handle ending
-            return (name:files)
-        Just _      -> invalid
 
     debugS "master" master
     liftIO $ withFile master WriteMode $ \handle -> do
         hPutStrLn handle ("\\RequirePackage{import}")
-        forM_ (reverse files') $ \file -> do
+        forM_ (reverse files) $ \file -> do
             let (path,name) = splitFileName file
             hPutStrLn handle ("\\subimport{" ++ path ++ "}{" ++ name ++ "}")
 

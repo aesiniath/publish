@@ -2,6 +2,7 @@ module Environment
 (
       Env(..)
     , initial
+    , Bookfile(..)
 )
 where
 
@@ -20,3 +21,8 @@ initial = do
     cwd <- getWorkingDirectory
     return (Env cwd [] "/dev/null" "/dev/null" "/dev/null")
 
+data Bookfile = Bookfile
+    { versionFrom :: Int
+    , preamblesFrom :: [FilePath]
+    , fragmentsFrom :: [FilePath]
+    } deriving (Show, Eq)
