@@ -72,10 +72,15 @@ markdownToPandoc contents =
 writeResult :: FilePath -> Pandoc -> Program None ()
 writeResult file doc =
   let
-    result = file ++ "-tmp"
     contents' = pandocToMarkdown doc
-  in
+  in do
+    params <- getCommandLine
+
+    let result = case lookupOptionFlag "inplace" params of
+            Just False  -> error "Invalid State"
+            Just True   -> file
+            Nothing     -> file ++ "-tmp"
+
     liftIO $ do
         withFile result WriteMode $ \handle ->
             hWrite handle contents'
-
