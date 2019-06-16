@@ -15,6 +15,7 @@ import Core.Text
 import qualified Data.Text as T (Text)
 import qualified Data.Text.IO as T
 import System.IO (withFile, IOMode(..))
+import System.Directory (getFileSize, renameFile)
 import Text.Pandoc (runIOorExplode, readMarkdown, def
     , ReaderOptions(readerExtensions), pandocExtensions, disableExtension
     , Extension(..), Pandoc, Extensions)
@@ -37,6 +38,7 @@ program = do
 getFragmentName :: Program None FilePath
 getFragmentName = do
     params <- getCommandLine
+
     let fragment = case lookupArgument "document" params of
             Nothing -> error "invalid"
             Just file -> file
@@ -69,13 +71,30 @@ markdownToPandoc contents =
     runIOorExplode $ do
         readMarkdown readingOptions contents
 
+data Inplace = Inplace | Console
+
 writeResult :: FilePath -> Pandoc -> Program None ()
 writeResult file doc =
   let
-    result = file ++ "-tmp"
     contents' = pandocToMarkdown doc
-  in
-    liftIO $ do
-        withFile result WriteMode $ \handle ->
-            hWrite handle contents'
+    result = file ++ "~tmp"
+  in do
+    params <- getCommandLine
 
+    let mode = case lookupOptionFlag "inplace" params of
+            Just False  -> error "Invalid State"
+            Just True   -> Inplace
+            Nothing     -> Console
+
+    case mode of
+        Inplace -> liftIO $ do
+            withFile result WriteMode $ \handle ->
+                hWrite handle contents'
+
+            size <- getFileSize result
+            if size == 0
+                then error "Zero content, not overwriting"
+                else renameFile result file
+
+        Console -> liftIO $ do
+                hWrite stdout contents'
