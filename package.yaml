@@ -10,7 +10,7 @@ description: |
   on GitHub.
   
   The main program, @render@, is available via a Docker image at
-  <https://cloud.docker.com/u/oprdyn/repository/docker/oprdyn/publish-render/general docker.io/oprdyn/publish-render:latest>
+  <https://hub.docker.com/r/oprdyn/publish-render docker.io/oprdyn/publish-render:latest>
 
 stability: experimental
 license: BSD3
