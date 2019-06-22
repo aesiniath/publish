@@ -55,7 +55,7 @@ preamble.latex
 Introduction.markdown
 Conclusion.markdown
 % end
-            |] `shouldBe` Just (Bookfile 2 ["preamble.latex"] ["Introduction.markdown", "Conclusion.markdown"])
+            |] `shouldBe` Just (Bookfile 2 ["preamble.latex"] ["Introduction.markdown", "Conclusion.markdown"] [])
 
         it "Correctly parses a complete bookfile with no preamble" $ do
             parseMaybe parseBookfile [quote|
@@ -64,4 +64,13 @@ Conclusion.markdown
 Introduction.markdown
 Conclusion.markdown
 % end
-            |] `shouldBe` Just (Bookfile 2 [] ["Introduction.markdown", "Conclusion.markdown"])
+            |] `shouldBe` Just (Bookfile 2 [] ["Introduction.markdown", "Conclusion.markdown"] [])
+
+        it "Correctly parses a complete bookfile with trailing fragments" $ do
+            parseMaybe parseBookfile [quote|
+% publish v2
+% begin
+Introduction.markdown
+% end
+Conclusion.markdown
+            |] `shouldBe` Just (Bookfile 2 [] ["Introduction.markdown"] ["Conclusion.markdown"])

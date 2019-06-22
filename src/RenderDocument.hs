@@ -68,15 +68,18 @@ renderDocument mode file = do
 
     let preambles = preamblesFrom book
     let fragments = fragmentsFrom book
+    let trailers  = trailersFrom book
 
-    event "Convert preamble and begin fragments to LaTeX"
+    event "Convert preamble fragments and begin marker to LaTeX"
     mapM_ processFragment preambles
     setupBeginningFile
 
     event "Convert document fragments to LaTeX"
     mapM_ processFragment fragments
 
+    event "Convert end marker and trailing fragments to LaTeX"
     setupEndingFile
+    mapM_ processFragment trailers
 
     event "Write intermediate LaTeX file"
     produceResult
@@ -270,7 +273,10 @@ processBookFile file = do
     list2 <- filterM skipNotFound (fragmentsFrom bookfile)
     debugS "fragments" (length list2)
 
-    return bookfile { preamblesFrom = list1, fragmentsFrom = list2 }
+    list3 <- filterM skipNotFound (trailersFrom bookfile)
+    debugS "trailers" (length list3)
+
+    return bookfile { preamblesFrom = list1, fragmentsFrom = list2, trailersFrom = list3}
   where
     skipNotFound :: FilePath -> Program t Bool
     skipNotFound fragment = do

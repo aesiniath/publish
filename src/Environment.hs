@@ -25,4 +25,5 @@ data Bookfile = Bookfile
     { versionFrom :: Int
     , preamblesFrom :: [FilePath]
     , fragmentsFrom :: [FilePath]
+    , trailersFrom :: [FilePath]
     } deriving (Show, Eq)
