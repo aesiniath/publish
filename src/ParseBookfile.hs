@@ -53,8 +53,10 @@ parseBookfile = do
     parseBeginLine
     fragments <- many (parseBlank *> parseFileLine <* parseBlank)
     parseEndLine
+    trailers <- many (parseBlank *> parseFileLine <* parseBlank)
     return Bookfile
         { versionFrom = version
         , preamblesFrom = preambles
         , fragmentsFrom = fragments
+        , trailersFrom = trailers
         }
