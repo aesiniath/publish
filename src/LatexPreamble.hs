@@ -101,7 +101,7 @@ beginning = [quote|
 \usepackage{color}
 \usepackage{fancyvrb}
 \newcommand{\VerbBar}{|}
-\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\},samepage=true]}
 \DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
 % Add ',fontsize=\small' for more characters per line
 \usepackage{framed}
