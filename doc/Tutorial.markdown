@@ -91,7 +91,6 @@ perhaps:
 preamble.latex
 % begin
 Introduction.markdown
-ending.latex
 % end
 ```
 

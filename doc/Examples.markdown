@@ -29,8 +29,7 @@ $ render EnormousThesis.book
 ```
 
 the result will be written to _EnormousThesis.pdf_, assuming you had
-`\documentclass` and `\begin{document}` in _preamble.latex_ and
-`\end{document}` in _ending.latex_, along with all the prerequisite LaTeX
+`\documentclass` in _preamble.latex_, along with all the prerequisite LaTeX
 packages installed on your system.
 
 Including images

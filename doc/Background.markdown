@@ -43,11 +43,11 @@ format.
 After considerable usage (which is to say, fighting with) the _pandoc_
 command and the "templates" it ships with we had learned enough to realize
 we didn't need it to render the PDF but could instead rely on it to get us
-to LaTeX as an intermediate format. Our solution was to use the _pandoc_
-command to convert _.markdown_ files to _.latex_ and then invoke _pdflatex_
-ourselves to get the desired _.pdf_ output. We later switched to _latexmk_
-to handle the multiple passes necessary to resolve cross-references arising
-when rendering a LaTeX document.
+to LaTeX as an intermediate format. Our initial solution was to use the
+_pandoc_ command to convert _.markdown_ files to _.latex_ and then invoke
+_pdflatex_ ourselves to get the desired _.pdf_ output. We later switched to
+_latexmk_ to handle the multiple passes necessary to resolve
+cross-references arising when rendering a LaTeX document.
 
 Pandoc is itself a (very large) Haskell library, so it was not a
 particularly earthshattering conceptual leap to consider calling into the
