@@ -4,8 +4,8 @@ Examples
 Subdirectories
 --------------
 
-A work with multiple chapters and images in different subdirectories could
-be described as follows
+A work with multiple chapters and images in different subdirectories could be
+described as follows
 
 ```
 % publish v2
@@ -35,8 +35,8 @@ packages installed on your system.
 Including images
 ----------------
 
-In the file _chapters/Analysis.markdown_ the markup used to include the
-SVG image would be:
+In the file _chapters/Analysis.markdown_ the markup used to include the SVG
+image would be:
 
 ```markdown
 ![A plot showing our analysis](chart-07.pdf)
@@ -53,11 +53,10 @@ Of course this translates to a LaTeX command,
 \includegraphics{chart-07.pdf}
 ```
 
-which you can use inline in _.markdown_ files or raw in _.latex_ source
-files.
+which you can use inline in _.markdown_ files or raw in _.latex_ source files.
 
 Other documentation:
 
- - [Getting Started](Tutorial.markdown)
- - [Background](Background.markdown)
- - [README](../README.markdown)
+-   [Getting Started](Tutorial.markdown)
+-   [Background](Background.markdown)
+-   [README](../README.markdown)
