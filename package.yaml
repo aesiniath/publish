@@ -36,8 +36,8 @@ dependencies:
  - template-haskell
  - text
  - typed-process
- - core-text >= 0.2.0
- - core-program >= 0.2.0
+ - core-text >= 0.2.2
+ - core-program >= 0.2.2
  - unix
  - unordered-containers
 
@@ -50,7 +50,6 @@ executables:
     other-modules:
      - Environment
      - LatexPreamble
-     - NotifyChanges
      - LatexOutputReader
      - PandocToMarkdown
      - ParseBookfile

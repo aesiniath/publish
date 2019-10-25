@@ -31,7 +31,6 @@ import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
     , writerTopLevelDivision, TopLevelDivision(TopLevelChapter))
 
 import Environment (Env(..), Bookfile(..))
-import NotifyChanges (waitForChange)
 import LatexPreamble (preamble, beginning, ending)
 import LatexOutputReader (parseOutputForError)
 import ParseBookfile (parseBookfile)
