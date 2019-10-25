@@ -3,7 +3,10 @@ packages:
  - .
 
 extra-deps:
- - ../unbeliever/core-text
- - ../unbeliever/core-program
- - ../unbeliever/core-data
+ - git: http://github.com/oprdyn/unbeliever
+   commit: de7cfc43b4a1572a204125b1f822f22b201089f8
+   subdirs:
+    - core-text
+    - core-program
+    - core-data
 
