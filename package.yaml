@@ -1,5 +1,5 @@
 name: publish
-version:  2.0.2
+version:  2.0.3
 synopsis: Publishing tools for papers, books, and presentations
 description: |
   Tools for rendering markdown-centric documents into PDFs.
@@ -13,11 +13,11 @@ description: |
   <https://hub.docker.com/r/oprdyn/publish-render docker.io/oprdyn/publish-render:latest>
 
 stability: experimental
-license: BSD3
-license-file: LICENCE
+license: MIT
+license-file: LICENSE
 author: Andrew Cowie <andrew@operationaldynamics.com>
 maintainer: Andrew Cowie <andrew@operationaldynamics.com>
-copyright: © 2016-2019 Operational Dynamics Consulting Pty Ltd, and Others
+copyright: © 2016-2019 Operational Dynamics and Others
 category: Text
 tested-with: GHC == 8.6
 github: oprdyn/publish
@@ -36,8 +36,8 @@ dependencies:
  - template-haskell
  - text
  - typed-process
- - core-text >= 0.2.2
- - core-program >= 0.2.2
+ - core-text >= 0.2.2.3
+ - core-program >= 0.2.2.3
  - unix
  - unordered-containers
 
