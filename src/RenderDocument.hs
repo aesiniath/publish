@@ -28,7 +28,7 @@ import System.Posix.User (getEffectiveUserID, getEffectiveGroupID)
 import Text.Megaparsec (runParser, errorBundlePretty)
 import Text.Pandoc (runIOorExplode, readMarkdown, writeLaTeX, def
     , readerExtensions, readerColumns, pandocExtensions
-    , writerTopLevelDivision, TopLevelDivision(TopLevelChapter))
+    , writerTopLevelDivision, TopLevelDivision(TopLevelSection))
 
 import Environment (Env(..), Bookfile(..))
 import LatexPreamble (preamble, beginning, ending)
@@ -329,7 +329,7 @@ convertMarkdown file =
         }
 
     writingOptions = def
-        { writerTopLevelDivision = TopLevelChapter
+        { writerTopLevelDivision = TopLevelSection
         }
 
   in do
