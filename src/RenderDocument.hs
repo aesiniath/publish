@@ -16,7 +16,7 @@ import qualified Data.List as List (dropWhileEnd, null)
 import Data.Maybe (isJust)
 import qualified Data.Text.IO as T
 import System.Directory (doesFileExist, doesDirectoryExist
-    , copyFileWithMetadata)
+    , copyFileWithMetadata, renameFile)
 import System.Exit (ExitCode(..))
 import System.FilePath.Posix (takeBaseName, takeExtension
     , replaceExtension, splitFileName, replaceDirectory)
@@ -386,11 +386,12 @@ convertImage file = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
         target = tmpdir ++ "/" ++ replaceExtension file ".pdf"
+        buffer = target ++ "-tmp"
 
         rsvgConvert =
             [ "rsvg-convert"
             , "--format=pdf"
-            , "--output=" ++ target
+            , "--output=" ++ buffer
             , file
             ]
 
@@ -401,13 +402,14 @@ convertImage file = do
             execProcess rsvgConvert
 
         case exit of
-            ExitFailure _ ->  do
+            ExitFailure _ -> do
                 event "Image processing failed"
                 debug "stderr" (intoRope err)
                 debug "stdout" (intoRope out)
                 write ("error: Unable to convert " <> intoRope file <> " from SVG to PDF")
                 throw exit
-            ExitSuccess -> return ()
+            ExitSuccess -> liftIO $ do
+                renameFile buffer target
 
 passthroughImage :: FilePath -> Program Env ()
 passthroughImage file = do
