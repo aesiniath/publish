@@ -405,6 +405,7 @@ convertImage file = do
                 event "Image processing failed"
                 debug "stderr" (intoRope err)
                 debug "stdout" (intoRope out)
+                write ("error: Unable to convert " <> intoRope file <> " from SVG to PDF")
                 throw exit
             ExitSuccess -> return ()
 
