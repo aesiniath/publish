@@ -1,5 +1,6 @@
 # build artifacts
 /.stack-work/
+/stack.yaml.lock
 /tags
 /publish.cabal
 /.vscode
