@@ -95,7 +95,7 @@ renderDocument mode file = do
         )
 
     -- question: original lists or filtered ones?
-    return (file : preambles ++ fragments)
+    return (file : preambles ++ fragments ++ trailers)
 
 
 extractMode :: Parameters -> Program Env Mode
