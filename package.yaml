@@ -1,5 +1,5 @@
 name: publish
-version: 2.1.1
+version: 2.2.0
 synopsis: Publishing tools for papers, books, and presentations
 description: |
   Tools for rendering markdown-centric documents into PDFs.
@@ -62,6 +62,15 @@ executables:
     other-modules:
      - FormatDocument
      - PandocToMarkdown
+
+  static:
+    source-dirs: src
+    main: StaticMain.hs
+    other-modules:
+     - Environment
+     - ParseBookfile
+     - StaticDocument
+     - Utilities
 
 tests:
   check:
