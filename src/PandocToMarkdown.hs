@@ -18,7 +18,7 @@ where
 
 import Control.DeepSeq (NFData)
 import Core.Text
-import Core.System
+import Core.System.Base
 import Data.Foldable (foldl')
 import Data.Monoid (Monoid(..))
 import Data.Semigroup (Semigroup(..))
