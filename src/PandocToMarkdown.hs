@@ -21,8 +21,6 @@ import Core.Text
 import Core.System.Base
 import Data.Foldable (foldl')
 import Data.List (intersperse)
-import Data.Monoid (Monoid(..))
-import Data.Semigroup (Semigroup(..))
 import qualified Data.Text as T (Text, null)
 import GHC.Generics (Generic)
 import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)

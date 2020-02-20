@@ -20,8 +20,7 @@ import System.Directory (doesFileExist, doesDirectoryExist
 import System.Exit (ExitCode(..))
 import System.FilePath.Posix (takeBaseName, takeExtension
     , replaceExtension, splitFileName, replaceDirectory)
-import System.IO (withFile, IOMode(WriteMode), hPutStrLn)
-import System.IO.Error (userError, IOError)
+import System.IO (hPutStrLn)
 import System.Posix.Directory (changeWorkingDirectory)
 import System.Posix.Temp (mkdtemp)
 import System.Posix.User (getEffectiveUserID, getEffectiveGroupID)
