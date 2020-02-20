@@ -20,9 +20,10 @@ import Control.DeepSeq (NFData)
 import Core.Text
 import Core.System.Base
 import Data.Foldable (foldl')
+import Data.List (intersperse)
 import Data.Monoid (Monoid(..))
 import Data.Semigroup (Semigroup(..))
-import Data.List (intersperse)
+import qualified Data.Text as T (Text, null)
 import GHC.Generics (Generic)
 import Text.Pandoc (Pandoc(..), Block(..), Inline(..), Attr, Format(..)
     , ListAttributes, Alignment(..), TableCell, MathType(..), QuoteType(..))
@@ -101,7 +102,7 @@ headingToMarkdown level inlines =
         2 -> text <> "\n" <> underline '-' text <> "\n"
         n -> intoRope (replicate n '#') <> " " <> text <> "\n"
 
-codeToMarkdown :: Attr -> String -> Rope
+codeToMarkdown :: Attr -> T.Text -> Rope
 codeToMarkdown attr literal =
   let
     body = intoRope literal
@@ -219,7 +220,7 @@ attributesToMarkdown ("", [], []) = emptyRope
 attributesToMarkdown (identifier, [], []) = "{#" <> intoRope identifier <> "}"
 attributesToMarkdown (identifier, classes, pairs) =
   let
-    i = if null identifier
+    i = if T.null identifier
         then emptyRope
         else "#" <> intoRope identifier <> " "
     cs = fmap (\c -> "." <> intoRope c) classes
@@ -391,7 +392,7 @@ convertInline inline =
     msg = "Unfinished inline: " ++ show inline
   in case inline of
     Space -> " "
-    Str string -> stringToMarkdown string
+    Str text -> stringToMarkdown text
     Emph inlines -> "_" <> inlinesToMarkdown inlines <> "_"
     Strong inlines -> "**" <> inlinesToMarkdown inlines <> "**"
     SoftBreak -> " "
@@ -404,7 +405,7 @@ convertInline inline =
     Link ("",["uri"],[]) _ (url, _) -> uriToMarkdown url
     Link attr inlines target -> linkToMarkdown attr inlines target
     Strikeout inlines -> "~~" <> inlinesToMarkdown inlines <> "~~"
-    Math mode string -> mathToMarkdown mode string
+    Math mode text -> mathToMarkdown mode text
     -- then things start getting weird
     SmallCaps inlines -> smallcapsToMarkdown inlines
     Subscript inlines -> "~" <> inlinesToMarkdown inlines <> "~"
@@ -420,41 +421,41 @@ Pandoc uses U+00A0 aka ASCII 160 aka &nbsp; to mark a non-breaking space, which
 seems to be how it describes an escaped space in Markdown. So scan for these
 and replace the escaped space on output.
 -}
-stringToMarkdown :: String -> Rope
+stringToMarkdown :: T.Text -> Rope
 stringToMarkdown =
     mconcat . intersperse "\\ " . breakPieces isNonBreaking . intoRope
   where
     isNonBreaking c = c == '\x00a0'
 
-imageToMarkdown :: Attr -> [Inline] -> (String,String) -> Rope
+imageToMarkdown :: Attr -> [Inline] -> (T.Text,T.Text) -> Rope
 imageToMarkdown attr inlines (url,title) =
   let
     alt = inlinesToMarkdown inlines
-    target = case title of
-        [] -> intoRope url
-        _  -> intoRope url <> " \"" <> intoRope title <> "\""
+    target = if T.null title
+        then intoRope url
+        else intoRope url <> " \"" <> intoRope title <> "\""
   in
     "![" <> alt <> "](" <> target <> ")" <> attributesToMarkdown attr
-    
-uriToMarkdown :: String -> Rope
+
+uriToMarkdown :: T.Text -> Rope
 uriToMarkdown url =
   let
     target = intoRope url
   in
     "<" <> target <> ">"
 
-linkToMarkdown :: Attr -> [Inline] -> (String,String) -> Rope
+linkToMarkdown :: Attr -> [Inline] -> (T.Text,T.Text) -> Rope
 linkToMarkdown attr inlines (url,title) =
   let
     text = inlinesToMarkdown inlines
-    target = case title of
-        [] -> intoRope url
-        _  -> intoRope url <> " \"" <> intoRope title <> "\""
+    target = if T.null title
+        then intoRope url
+        else intoRope url <> " \"" <> intoRope title <> "\""
   in
     "[" <> text <> "](" <> target <> ")" <> attributesToMarkdown attr
 
 -- is there more to this?
-mathToMarkdown :: MathType -> String -> Rope
+mathToMarkdown :: MathType -> T.Text -> Rope
 mathToMarkdown (InlineMath) math = "$" <> intoRope math <> "$"
 mathToMarkdown (DisplayMath) math = "$$" <> intoRope math <> "$$"
 
