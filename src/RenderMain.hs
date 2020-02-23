@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE CPP #-}
 
 module Main where
 
@@ -11,7 +12,11 @@ import RenderDocument (program)
 import Environment (initial)
 
 version :: Version
+#ifdef __GHCIDE__
+version = "0"
+#else
 version = $(fromPackage)
+#endif
 
 main :: IO ()
 main = do
