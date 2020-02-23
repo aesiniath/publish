@@ -1,1 +1,1 @@
-cradle: {stack: {component: "publish:exe:format" }}
+cradle: {stack: {component: "publish:test:check" }}
