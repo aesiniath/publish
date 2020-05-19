@@ -2,16 +2,17 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module LatexPreamble
-    ( preamble
-    , beginning
-    , ending
-    )
+  ( preamble,
+    beginning,
+    ending,
+  )
 where
 
 import Core.Text
 
 preamble :: Rope
-preamble = [quote|
+preamble =
+  [quote|
 \documentclass[12pt,a4paper,oneside,openany]{memoir}
 
 %
@@ -92,7 +93,8 @@ preamble = [quote|
 |]
 
 beginning :: Rope
-beginning = [quote|
+beginning =
+  [quote|
 
 %
 % Output from Skylighting.styleToLaTeX
@@ -149,8 +151,8 @@ beginning = [quote|
 \begin{document}
 |]
 
-
 ending :: Rope
-ending = [quote|
+ending =
+  [quote|
 \end{document}
 |]
