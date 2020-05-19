@@ -10,9 +10,8 @@ import Core.Text
 import Environment (initial)
 import RenderDocument (program)
 
-version :: Version
-
 #ifdef __GHCIDE__
+version :: Version
 version = "0"
 #else
 version = $(fromPackage)
