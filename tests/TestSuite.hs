@@ -1,18 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Test.Hspec
-
 import CheckBookfileParser
 import CheckTableProperties
-import Core.System
 import CompareFragments
+import Core.System
+import Test.Hspec
 
 main :: IO ()
 main = do
-    finally (hspec suite) (putStrLn ".")
+  finally (hspec suite) (putStrLn ".")
 
 suite :: Spec
 suite = do
-    checkTableProperties
-    checkByComparingFragments
-    checkBookfileParser
+  checkTableProperties
+  checkByComparingFragments
+  checkBookfileParser
