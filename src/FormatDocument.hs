@@ -2,53 +2,59 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module FormatDocument
-    ( program
-    , loadFragment
-    , markdownToPandoc
-    )
+  ( program,
+    loadFragment,
+    markdownToPandoc,
+  )
 where
 
 import Core.Program
 import Core.System
 import Core.Text
-
 import qualified Data.Text as T (Text)
 import qualified Data.Text.IO as T
-import System.IO (withFile, IOMode(..))
-import System.Directory (getFileSize, renameFile)
-import Text.Pandoc (runIOorExplode, readMarkdown, def
-    , ReaderOptions(readerExtensions), pandocExtensions, disableExtension
-    , Extension(..), Pandoc, Extensions)
-
 import PandocToMarkdown
+import System.Directory (getFileSize, renameFile)
+import System.IO (IOMode (..), withFile)
+import Text.Pandoc
+  ( Extension (..),
+    Extensions,
+    Pandoc,
+    ReaderOptions (readerExtensions),
+    def,
+    disableExtension,
+    pandocExtensions,
+    readMarkdown,
+    runIOorExplode,
+  )
 
 program :: Program None ()
 program = do
-    event "Identify document fragment"
-    file <- getFragmentName
+  event "Identify document fragment"
+  file <- getFragmentName
 
-    event "Load to Pandoc internal representation"
-    parsed <- loadFragment file
+  event "Load to Pandoc internal representation"
+  parsed <- loadFragment file
 
-    event "Write to Markdown format"
-    writeResult file parsed
+  event "Write to Markdown format"
+  writeResult file parsed
 
-    event "Complete"
+  event "Complete"
 
 getFragmentName :: Program None FilePath
 getFragmentName = do
-    params <- getCommandLine
+  params <- getCommandLine
 
-    let fragment = case lookupArgument "document" params of
-            Nothing -> error "invalid"
-            Just file -> file
-    return fragment
+  let fragment = case lookupArgument "document" params of
+        Nothing -> error "invalid"
+        Just file -> file
+  return fragment
 
 loadFragment :: FilePath -> Program None Pandoc
 loadFragment file =
-    liftIO $ do
-        contents <- T.readFile file
-        markdownToPandoc contents
+  liftIO $ do
+    contents <- T.readFile file
+    markdownToPandoc contents
 
 --
 -- Unlike the render use case, here we suppress certain
@@ -56,45 +62,44 @@ loadFragment file =
 --
 markdownToPandoc :: T.Text -> IO Pandoc
 markdownToPandoc contents =
-  let
-    disableFrom :: Extensions -> [Extension] -> Extensions
-    disableFrom extensions list = foldr disableExtension extensions list
-
-    readingOptions = def
-        { readerExtensions = disableFrom pandocExtensions
-            [ Ext_implicit_figures
-            , Ext_shortcut_reference_links
-            , Ext_smart
-            ]
-        }
-  in do
-    runIOorExplode $ do
-        readMarkdown readingOptions contents
+  let disableFrom :: Extensions -> [Extension] -> Extensions
+      disableFrom extensions list = foldr disableExtension extensions list
+      readingOptions =
+        def
+          { readerExtensions =
+              disableFrom
+                pandocExtensions
+                [ Ext_implicit_figures,
+                  Ext_shortcut_reference_links,
+                  Ext_smart
+                ]
+          }
+   in do
+        runIOorExplode $ do
+          readMarkdown readingOptions contents
 
 data Inplace = Inplace | Console
 
 writeResult :: FilePath -> Pandoc -> Program None ()
 writeResult file doc =
-  let
-    contents' = pandocToMarkdown doc
-    result = file ++ "~tmp"
-  in do
-    params <- getCommandLine
+  let contents' = pandocToMarkdown doc
+      result = file ++ "~tmp"
+   in do
+        params <- getCommandLine
 
-    let mode = case lookupOptionFlag "inplace" params of
-            Just False  -> error "Invalid State"
-            Just True   -> Inplace
-            Nothing     -> Console
+        let mode = case lookupOptionFlag "inplace" params of
+              Just False -> error "Invalid State"
+              Just True -> Inplace
+              Nothing -> Console
 
-    case mode of
-        Inplace -> liftIO $ do
+        case mode of
+          Inplace -> liftIO $ do
             withFile result WriteMode $ \handle ->
-                hWrite handle contents'
+              hWrite handle contents'
 
             size <- getFileSize result
             if size == 0
-                then error "Zero content, not overwriting"
-                else renameFile result file
-
-        Console -> liftIO $ do
-                hWrite stdout contents'
+              then error "Zero content, not overwriting"
+              else renameFile result file
+          Console -> liftIO $ do
+            hWrite stdout contents'
