@@ -14,6 +14,7 @@ import RenderDocument (program)
 version :: Version
 version = "0"
 #else
+version :: Version
 version = $(fromPackage)
 #endif
 
