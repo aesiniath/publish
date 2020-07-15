@@ -477,7 +477,7 @@ renderPDF = do
           [ "latexmk"
           ]
       options =
-        [ "-xelatex",
+        [ "-lualatex",
           "-output-directory=" ++ tmpdir,
           "-interaction=nonstopmode",
           "-halt-on-error",
