@@ -6,21 +6,18 @@ description: |
   
   A description of this package, a list of features, and some background
   to its design is contained in the
-  <https://github.com/oprdyn/publish/blob/master/README.markdown README>
+  <https://github.com/aesiniath/publish/blob/master/README.markdown README>
   on GitHub.
-  
-  The main program, @render@, is available via a Docker image at
-  <https://hub.docker.com/r/oprdyn/publish-render docker.io/oprdyn/publish-render:latest>
 
 stability: experimental
 license: MIT
 license-file: LICENSE
-author: Andrew Cowie <andrew@operationaldynamics.com>
-maintainer: Andrew Cowie <andrew@operationaldynamics.com>
-copyright: © 2016-2020 Operational Dynamics and Others
+author: Andrew Cowie <istathar@gmail.com>
+maintainer: Andrew Cowie <istathar@gmail.com>
+copyright: © 2016-2020 Athae Eredh Siniath and Others
 category: Text
 tested-with: GHC == 8.6
-github: oprdyn/publish
+github: aesiniath/publish
 
 dependencies:
  - base >= 4.11 && < 5
