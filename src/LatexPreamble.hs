@@ -1,5 +1,7 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module LatexPreamble
   ( preamble,
@@ -8,6 +10,7 @@ module LatexPreamble
   )
 where
 
+import Core.Program.Metadata
 import Core.Text
 
 preamble :: Rope
@@ -92,6 +95,14 @@ preamble =
 
 |]
 
+#ifdef __GHCIDE__
+version :: Version
+version = "0"
+#else
+version :: Version
+version = $(fromPackage)
+#endif
+
 beginning :: Rope
 beginning =
   [quote|
@@ -148,8 +159,11 @@ beginning =
 \usepackage[normalem]{ulem}
 \pdfstringdefDisableCommands{\renewcommand{\sout}{}}
 
-\begin{document}
 |]
+    <> "\\hypersetup{pdfproducer={Markdown and Latex rendered via Publish "
+    <> intoRope (versionNumberFrom version)
+    <> "},pdfcreator={lualatex}}\n"
+    <> "\\begin{document}\n"
 
 ending :: Rope
 ending =
