@@ -8,6 +8,7 @@ module RenderDocument
 where
 
 import Control.Monad (filterM, forM_, forever, void)
+import Core.Data
 import Core.Program
 import Core.System
 import Core.Text
@@ -108,8 +109,16 @@ renderDocument mode file = do
         Cycle -> return ()
     )
 
-  -- question: original lists or filtered ones?
-  return (file : preambles ++ fragments ++ trailers)
+  return (uniqueList file preambles fragments trailers)
+
+--
+-- Quickly reduce the fragment names to a unique list so we don't waste
+-- inotify watches.
+--
+uniqueList :: FilePath -> [FilePath] -> [FilePath] -> [FilePath] -> [FilePath]
+uniqueList file preambles fragments trailers =
+  let files = insertElement file (intoSet trailers <> (intoSet preambles <> intoSet fragments))
+   in fromSet files
 
 extractMode :: Parameters -> Program Env Mode
 extractMode params =

@@ -1,5 +1,5 @@
 name: publish
-version: 2.1.3
+version: 2.1.4
 synopsis: Publishing tools for papers, books, and presentations
 description: |
   Tools for rendering markdown-centric documents into PDFs.
@@ -34,6 +34,7 @@ dependencies:
  - text
  - typed-process
  - core-text >= 0.2.2.3
+ - core-data
  - core-program >= 0.2.2.3
  - unix
  - unordered-containers
