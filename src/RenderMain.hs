@@ -46,6 +46,15 @@ main = do
             rendering engine if changes are detected.
           |],
             Option
+              "no-copy"
+              Nothing
+              Empty
+              [quote|
+            Should the resultant PDF be copied to this directory? Of course
+            it should, so the default is true. Select this if you want to
+            leave the file in /tmp.
+          |],
+            Option
               "temp"
               Nothing
               (Value "TMPDIR")
