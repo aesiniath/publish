@@ -54,10 +54,12 @@ import Utilities (ensureDirectory, execProcess, ifNewer, isNewer)
 
 data Mode = Once | Cycle
 
+data Copy = InstallPdf | NoCopyPdf
+
 program :: Program Env ()
 program = do
   params <- getCommandLine
-  mode <- extractMode params
+  (mode, copy) <- extractMode params
 
   event "Identify .book file"
   bookfile <- extractBookFile params
@@ -65,13 +67,13 @@ program = do
   case mode of
     Once -> do
       -- normal operation, single pass
-      void (renderDocument mode bookfile)
+      void (renderDocument (mode, copy) bookfile)
     Cycle -> do
       -- use inotify to rebuild on changes
-      forever (renderDocument mode bookfile >>= waitForChange)
+      forever (renderDocument (mode, copy) bookfile >>= waitForChange)
 
-renderDocument :: Mode -> FilePath -> Program Env [FilePath]
-renderDocument mode file = do
+renderDocument :: (Mode, Copy) -> FilePath -> Program Env [FilePath]
+renderDocument (mode, copy) file = do
   event "Read .book file"
   book <- processBookFile file
 
@@ -102,7 +104,9 @@ renderDocument mode file = do
   catch
     ( do
         renderPDF
-        copyHere
+        case copy of
+          InstallPdf -> copyHere
+          NoCopyPdf -> return ()
     )
     ( \(e :: ExitCode) -> case mode of
         Once -> throw e
@@ -120,13 +124,17 @@ uniqueList file preambles fragments trailers =
   let files = insertElement file (intoSet trailers <> (intoSet preambles <> intoSet fragments))
    in fromSet files
 
-extractMode :: Parameters -> Program Env Mode
+extractMode :: Parameters -> Program Env (Mode, Copy)
 extractMode params =
   let mode = case lookupOptionFlag "watch" params of
         Just False -> error "Invalid State"
         Just True -> Cycle
         Nothing -> Once
-   in return mode
+      copy = case lookupOptionFlag "no-copy" params of
+        Just False -> error "Invalid State"
+        Just True -> NoCopyPdf
+        Nothing -> InstallPdf
+   in return (mode, copy)
 
 {-
 For the situation where the .book file is in a location other than '.'
