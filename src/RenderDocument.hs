@@ -28,7 +28,8 @@ import System.Directory
   )
 import System.Exit (ExitCode (..))
 import System.FilePath.Posix
-  ( replaceDirectory,
+  ( dropExtension,
+    replaceDirectory,
     replaceExtension,
     splitFileName,
     takeBaseName,
@@ -411,7 +412,7 @@ convertImage :: FilePath -> Program Env ()
 convertImage file = do
   env <- getApplicationState
   let tmpdir = tempDirectoryFrom env
-      basepath = takeExtension file
+      basepath = dropExtension file
       target = tmpdir ++ "/" ++ basepath ++ ".pdf"
       buffer = tmpdir ++ "/" ++ basepath ++ "~tmp.pdf"
       inkscape =
