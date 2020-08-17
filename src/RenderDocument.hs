@@ -411,12 +411,13 @@ convertImage :: FilePath -> Program Env ()
 convertImage file = do
   env <- getApplicationState
   let tmpdir = tempDirectoryFrom env
-      target = tmpdir ++ "/" ++ replaceExtension file ".pdf"
-      buffer = target ++ "-tmp"
-      rsvgConvert =
-        [ "rsvg-convert",
-          "--format=pdf",
-          "--output=" ++ buffer,
+      basepath = takeExtension file
+      target = tmpdir ++ "/" ++ basepath ++ ".pdf"
+      buffer = tmpdir ++ "/" ++ basepath ++ "~tmp.pdf"
+      inkscape =
+        [ "inkscape",
+          "--export-type=pdf",
+          "--export-filename=" ++ buffer,
           file
         ]
 
@@ -424,7 +425,7 @@ convertImage file = do
     debugS "target" target
     (exit, out, err) <- do
       ensureDirectory target
-      execProcess rsvgConvert
+      execProcess inkscape
 
     case exit of
       ExitFailure _ -> do
