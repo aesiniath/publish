@@ -31,11 +31,11 @@ and that is what **publish** provides. It gives you a way to:
 
  2. convert Markdown fragments into LaTeX using **pandoc**;
 
- 3. use **librsvg** to convert _.svg_ images into something that can be
-    included by the LaTeX processors; and
+ 3. use **inkscape** programmatically to convert _.svg_ images into something
+    that can be included by the LaTeX processors; and
 
  4. combine the resultant intermediate pieces and render them to a _.pdf_
-    using the **xetex** toolchain.
+    using the **lualatex** toolchain.
 
 Documentation
 -------------

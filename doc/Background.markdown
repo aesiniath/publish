@@ -71,7 +71,7 @@ for some years and the target format, PDF, is itself a high-quality vector
 format.
 
 The solution, or at least work-around, is render (convert) each of the SVGs to
-a PDF first using **librsvg**'s _rsvg-convert_ and then include these
+a PDF first using **inkscape**'s command-line program and then include these
 fragments in the typeset document. While we tend to think of PDFs as "pages"
 it is at its essence just a way of describing vector graphics, and (again not
 something you would have thought of) you can include PDF fragments in \[what
