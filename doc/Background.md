@@ -42,10 +42,10 @@ After considerable usage (which is to say, fighting with) the _pandoc_ command
 and the "templates" it ships with we had learned enough to realize we didn't
 need it to render the PDF but could instead rely on it to get us to LaTeX as
 an intermediate format. Our initial solution was to use the _pandoc_ command
-to convert _.markdown_ files to _.latex_ and then invoke _pdflatex_ ourselves
-to get the desired _.pdf_ output. We later switched to _latexmk_ to handle the
+to convert _.md_ files to LaTeX _.tex_ and then invoke _pdflatex_ ourselves to
+get the desired _.pdf_ output. We later switched to _latexmk_ to handle the
 multiple passes necessary to resolve cross-references arising when rendering a
-LaTeX document.
+LaTeX document, and _lualatex_ for more modern font handling.
 
 Pandoc is itself a (very large) Haskell library, so it was not a particularly
 earthshattering conceptual leap to consider calling into the library directly
@@ -77,7 +77,13 @@ it is at its essence just a way of describing vector graphics, and (again not
 something you would have thought of) you can include PDF fragments in \[what
 will become\] another PDF document using the `\inclugegraphics` command.
 
+Extensions
+----------
+
+Both _.markdown_ and _.md_ are supported for files containing Markdown. Both
+_.latex_ and _.tex_ are supported for pure LaTeX files.
+
 Further reading:
 
--   [Getting Started](Tutorial.markdown)
--   [Examples](Examples.markdown)
+-   [Getting Started](Tutorial.md)
+-   [Examples](Examples.md)

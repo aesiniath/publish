@@ -9,15 +9,15 @@ described as follows
 
 ```
 % publish v2
-preamble.latex
+preamble.tex
 % begin
-chapters/Introduction.markdown
-chapters/RelatedWork.markdown
-chapters/Results.latex
+chapters/Introduction.md
+chapters/RelatedWork.md
+chapters/Results.tex
 chapters/chart-07.svg
-chapters/Analysis.markdown
-chapters/Conclusion.markdown
-generated/References.latex
+chapters/Analysis.md
+chapters/Conclusion.md
+generated/References.tex
 % end
 ```
 
@@ -29,13 +29,13 @@ $ render EnormousThesis.book
 ```
 
 the result will be written to _EnormousThesis.pdf_, assuming you had
-`\documentclass` in _preamble.latex_, along with all the prerequisite LaTeX
+`\documentclass` in _preamble.tex_, along with all the prerequisite LaTeX
 packages installed on your system.
 
 Including images
 ----------------
 
-In the file _chapters/Analysis.markdown_ the markup used to include the SVG
+In the file _chapters/Analysis.md_ the markup used to include the SVG
 image would be:
 
 ```markdown
@@ -53,10 +53,10 @@ Of course this translates to a LaTeX command,
 \includegraphics{chart-07.pdf}
 ```
 
-which you can use inline in _.markdown_ files or raw in _.latex_ source files.
+which you can use inline in _.md_ files or raw in _.tex_ source files.
 
 Other documentation:
 
--   [Getting Started](Tutorial.markdown)
--   [Background](Background.markdown)
--   [README](../README.markdown)
+-   [Getting Started](Tutorial.md)
+-   [Background](Background.md)
+-   [README](../README.md)

@@ -24,11 +24,10 @@ $
 ```
 
 You are welcome to use any container you like. You need Latexmk installed (the
-**latexmk** package) with the XeLaTeX processor installed (the
-**texlive-xelatex** collection should pull it in) as _render_ will invoke
-_latexmk_ command to build your resultant PDF. Images require that
-_rsvg-convert_ is present (supplied by **librsvg2-tools** on Fedora) on your
-host system.
+**latexmk** package) with the LuaLaTeX processor installed (the
+**texlive-lualatex** collection should pull it in) as _render_ will invoke
+_latexmk_ command to build your resultant PDF. Images require that _inkscape_
+is present (supplied by **inkscape** package on Fedora) on your host system.
 
 If you specify the `--docker` option, _render_ will spawn a Docker container
 from the image you specify, mount the temporary directory with the intermediate
@@ -49,10 +48,10 @@ you should be able to do:
 $ docker run \
     --rm=true \
     --volume=`pwd`:/mnt \
-    oprdyn/publish-render:latest \
+    aesiniath/publish-render:latest \
         render \
             --builtin-preamble \
-            --docker=oprdyn/publish-builtin:latest \
+            --docker=aesiniath/publish-builtin:latest \
             Trees.book
 $
 ```
@@ -72,7 +71,7 @@ $ docker run \
     mypublish:latest \
         render \
             --builtin-preamble \
-            --docker=oprdyn/publish-builtin:latest \
+            --docker=aesiniath/publish-builtin:latest \
             Trees.book
 $
 ```
@@ -120,7 +119,7 @@ it.
 
 Other documentation:
 
- - [README](../README.markdown)
- - [Background](Background.markdown)
- - [Examples](Examples.markdown)
+ - [README](../README.md)
+ - [Background](Background.md)
+ - [Examples](Examples.md)
 

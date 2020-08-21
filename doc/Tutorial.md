@@ -20,7 +20,7 @@ to you, but trees are **green**.
 
 ```
 
-Put your text into a file called _Introduction.markdown_.
+Put your text into a file called _Introduction.md_.
 
 You now need to tell **publish** which files make up the document you want to
 render. Create another file which lists the pieces of your manuscript, one per
@@ -29,7 +29,7 @@ line. Here we've only got one fragment, so this won't take long:
 ```text
 % publish v2
 % begin
-Introduction.markdown
+Introduction.md
 % end
 ```
 
@@ -65,7 +65,7 @@ either way you've now got a file called _Trees.pdf_:
 
 ```
 $ ls
-Introduction.markdown
+Introduction.md
 Trees.book
 Trees.pdf
 $
@@ -87,9 +87,9 @@ They should put their preamble as the first item in the bookfile, perhaps:
 
 ```
 % publish v2
-preamble.latex
+preamble.tex
 % begin
-Introduction.markdown
+Introduction.md
 % end
 ```
 
@@ -109,9 +109,9 @@ $
 If you specify the `--docker` option _render_ will spawn a Docker container
 from the image you specify. The image shown above has the dependencies You're
 welcome to use any container you like. Further details are on the
-[Docker](Docker.markdown) page.
+[Docker](Docker.md) page.
 
 See also:
 
--   [Further examples](Examples.markdown)
--   [Background](Background.markdown)
+-   [Further examples](Examples.md)
+-   [Background](Background.md)
