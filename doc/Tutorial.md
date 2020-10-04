@@ -102,7 +102,7 @@ yourself you can freely do so. There is also an option to run the render in a
 Docker container.
 
 ```shell
-$ render --builtin-preamble --docker=oprdyn/publish-builtin:latest Trees.book
+$ render --builtin-preamble --docker=aesiniath/publish-builtin:latest Trees.book
 $
 ```
 

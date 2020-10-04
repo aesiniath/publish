@@ -19,7 +19,7 @@ processor in there, rather than on your own system, by specifying the
 `--docker` option:
 
 ```shell
-$ render --builtin-preamble --docker=oprdyn/publish-builtin:latest Trees.book
+$ render --builtin-preamble --docker=aesiniath/publish-builtin:latest Trees.book
 $
 ```
 
@@ -41,7 +41,7 @@ Docker Inception
 ----------------
 
 You can also run the _render_ tool itself in a Docker container. There's an
-image available at `docker.io/oprdyn/publish-render`. This means conceptually
+image available at `docker.io/aesiniath/publish-render`. This means conceptually
 you should be able to do:
 
 ```shell
@@ -76,7 +76,7 @@ $ docker run \
 $
 ```
 
-where `mypublish` is a locally created image built from `oprdyn/publish-render`
+where `mypublish` is a locally created image built from `aesiniath/publish-render`
 that adds the **docker-ce-cli** and **librsvg2-bin** packages.
 
 The second trouble is that there's no way to get the temporary directory
@@ -105,7 +105,7 @@ $ docker run \
         render \
             --temp=/tmp/publish-local \
             --builtin-preamble \
-            --docker=oprdyn/publish-builtin:latest \
+            --docker=aesiniath/publish-builtin:latest \
             Trees.book
 $
 ```
