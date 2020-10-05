@@ -1,1 +1,19 @@
-cradle: {stack: {component: "publish:test:check" }}
+cradle:
+  stack:
+    - path: "./src/FormatMain.hs"
+      component: "publish:exe:format"
+
+    - path: "./src/FormatDocument.hs"
+      component: "publish:exe:format"
+
+    - path: "./src/RenderMain.hs"
+      component: "publish:exe:render"
+
+    - path: "./src/RenderDocument.hs"
+      component: "publish:exe:render"
+
+    - path: "./src"
+      component: "publish:test:check"
+
+    - path: "./tests"
+      component: "publish:test:check"
