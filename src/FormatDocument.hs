@@ -15,7 +15,6 @@ import qualified Data.Text as T (Text)
 import qualified Data.Text.IO as T
 import PandocToMarkdown
 import System.Directory (getFileSize, renameFile)
-import System.IO (IOMode (..), withFile)
 import Text.Pandoc
   ( Extension (..),
     Extensions,
