@@ -26,7 +26,6 @@ dependencies:
  - deepseq
  - directory
  - filepath
- - hinotify
  - megaparsec
  - pandoc-types
  - pandoc
