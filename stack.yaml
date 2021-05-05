@@ -1,5 +1,7 @@
-resolver: lts-16.27
+resolver: lts-16.31
 packages:
- - .
+- .
+extra-deps:
+- core-program-0.2.7.1
 nix:
   packages: [zlib]

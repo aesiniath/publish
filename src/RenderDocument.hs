@@ -75,6 +75,7 @@ program = do
 
 renderDocument :: (Mode, Copy) -> FilePath -> Program Env [FilePath]
 renderDocument (mode, copy) file = do
+  resetTimer
   event "Read .book file"
   book <- processBookFile file
 
