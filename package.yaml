@@ -26,14 +26,13 @@ dependencies:
  - deepseq
  - directory
  - filepath
- - hinotify
  - megaparsec
  - pandoc-types
  - pandoc
  - template-haskell
  - text
  - typed-process
- - core-text >= 0.2.2.3
+ - core-text >= 0.3.0
  - core-data
  - core-program >= 0.2.7
  - unix
