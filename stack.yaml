@@ -5,11 +5,8 @@ packages:
 
 extra-deps:
   - core-program-0.2.7.1
-  - citeproc-0.3.0.4@sha256:e60623607dbb5b18ae66da145e0ec883435eab729255e0b64c358d3a9d748c73,5590
-  - commonmark-0.1.1.3@sha256:e3af411216448fe61cc36d2d5dbffd85c9f714761f1a47ae0a9c611babf72ea7,3278
-  - commonmark-extensions-0.2.0.4@sha256:6a437bcfa3c757af4262b71336513619990eafb5cfdc33e57a499c93ad225608,3184
-  - commonmark-pandoc-0.2.0.1@sha256:529c6e2c6cabf61558b66a28123eafc1d90d3324be29819f59f024e430312c1f,1105
-  - pandoc-2.11.3.2@sha256:91fdb9b8e3fbb2269bc1d17f7dddb35085330600f6040895d706eb09a2e8d812,39694
+  - hslua-module-path-0.1.0.1
+  - pandoc-2.13
 
 nix:
   packages: [zlib]
