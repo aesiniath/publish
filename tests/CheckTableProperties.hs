@@ -6,31 +6,13 @@ module CheckTableProperties (
   checkTableProperties,
 ) where
 
-import Control.DeepSeq (force)
-import Control.Exception (evaluate)
 import Core.Text
-import FormatDocument (markdownToPandoc)
 import PandocToMarkdown (
-  NotSafe,
-  pandocToMarkdown,
   tableToMarkdown,
  )
 import Test.Hspec
 import Text.Pandoc
 
-notsafe :: Selector NotSafe
-notsafe = const True
-
-{-
-tableToMarkdown ::
-    Attr ->
-    Caption ->
-    [ColSpec] ->
-    TableHead ->
-    [TableBody] ->
-    TableFoot ->
-    Rope
--}
 checkTableProperties :: Spec
 checkTableProperties = do
   describe "Table rendering code" $ do
@@ -44,7 +26,7 @@ checkTableProperties = do
               )
               [ (AlignRight, ColWidthDefault)
               , (AlignCenter, ColWidthDefault)
-              , (AlignDefault, ColWidthDefault)
+              , (AlignDefault, ColWidth 0.5)
               ]
               ( TableHead
                   ("", [], [])
@@ -107,6 +89,6 @@ checkTableProperties = do
             result
               `shouldBe` [quote|
 | First | Second | Third |
-|-------:|:------:|--------|
+|-------:|:------:|---------------------------------------|
 | 1 | 2 | 3 |
             |]

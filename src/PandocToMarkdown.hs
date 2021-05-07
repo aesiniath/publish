@@ -273,7 +273,7 @@ tableToMarkdown attr caption alignments thead tbodys tfoot =
 
     headerToMarkdown :: TableHead -> Rope
     headerToMarkdown (TableHead _ [row]) = rowToMarkdown row
-    headerToMarkdown _ = impureThrow (NotSafe "What do we do with this (header)")
+    headerToMarkdown _ = impureThrow (NotSafe "What do we do with this TableHead?")
 
     columnToMarkdown :: (Alignment, ColWidth) -> Rope
     columnToMarkdown (align, col) =
@@ -284,7 +284,7 @@ tableToMarkdown attr caption alignments thead tbodys tfoot =
                 _ -> dashChar
 
             num = case col of
-                ColWidth x -> floor (total * x)
+                ColWidth x -> floor (total * x) - 2
                 ColWidthDefault -> 6
             middle = mconcat (replicate num dashChar)
 
