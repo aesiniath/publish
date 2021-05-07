@@ -1,7 +1,12 @@
-resolver: lts-16.31
+resolver: lts-17.10
+
 packages:
-- .
+  - .
+
 extra-deps:
-- core-program-0.2.7.1
+  - core-program-0.2.7.1
+  - hslua-module-path-0.1.0.1
+  - pandoc-2.13
+
 nix:
   packages: [zlib]

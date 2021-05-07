@@ -27,8 +27,8 @@ dependencies:
  - directory
  - filepath
  - megaparsec
- - pandoc-types
- - pandoc
+ - pandoc-types >= 1.22
+ - pandoc >= 2.11
  - template-haskell
  - text
  - typed-process
