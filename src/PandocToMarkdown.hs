@@ -20,6 +20,7 @@ import Text.Pandoc (
     Block (..),
     Caption (..),
     Cell (..),
+    ColSpan (..),
     ColSpec,
     ColWidth (..),
     Format (..),
@@ -29,6 +30,7 @@ import Text.Pandoc (
     Pandoc (..),
     QuoteType (..),
     Row (..),
+    RowSpan (..),
     TableBody (..),
     TableFoot (..),
     TableHead (..),
@@ -241,7 +243,7 @@ tableToMarkdown ::
     [TableBody] ->
     TableFoot ->
     Rope
-tableToMarkdown attr caption alignments thead tbodys tfoot =
+tableToMarkdown _ _ alignments thead tbodys _ =
     mconcat
         ( intersperse
             "\n"
@@ -298,33 +300,24 @@ tableToMarkdown attr caption alignments thead tbodys tfoot =
     bodiesToMarkdown = mconcat . intersperse newlineChar . fmap bodyToMarkdown
 
     bodyToMarkdown :: TableBody -> Rope
-    bodyToMarkdown (TableBody _ rowHeadCols iHeads rows) =
+    bodyToMarkdown (TableBody _ _ _ rows) =
         foldl' (<>) emptyRope
             . intersperse newlineChar
             . fmap rowToMarkdown
             $ rows
 
     rowToMarkdown :: Row -> Rope
-    rowToMarkdown (Row attr cells) =
+    rowToMarkdown (Row _ cells) =
         surround pipeChar . foldl' (<>) emptyRope
             . intersperse pipeChar
             . fmap (surround spaceChar . cellToMarkdown)
             $ cells
 
     cellToMarkdown :: Cell -> Rope
-    cellToMarkdown (Cell _ _ rowSpan colSpan [block]) =
+    cellToMarkdown (Cell _ _ (RowSpan 1) (ColSpan 1) [block]) =
         convert block
     cellToMarkdown _ =
         impureThrow (NotSafe "Multiple Blocks encountered")
-
-    {-
-        underlineHeaders :: Rope
-        underlineHeaders =
-            foldl' (<>) emptyRope . intersperse " "
-                . fmap (\size -> intoRope (replicate size '-'))
-                . take (widthRope headerline)
-                $
-    -}
 
     convert :: Block -> Rope
     convert (Plain inlines) =
@@ -336,17 +329,6 @@ data NotSafe = NotSafe String
     deriving (Show)
 
 instance Exception NotSafe
-
-{-                 in case align of
-                        AlignCenter -> intoRope (replicate left ' ') <> l <> intoRope (replicate right ' ')
-                        AlignRight -> intoRope (replicate padding ' ') <> l
-                        AlignLeft -> l <> intoRope (replicate padding ' ')
-                        AlignDefault -> l <> intoRope (replicate padding ' ')
-            | widthRope l == size = case align of
-                AlignRight -> impureThrow (NotSafe "Column width insufficient to show alignment")
-                _ -> l
-            | otherwise = impureThrow (NotSafe "Line wider than permitted size")
--}
 
 ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 
