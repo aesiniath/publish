@@ -6,12 +6,6 @@
 module PandocToMarkdown (
     pandocToMarkdown,
     NotSafe (..),
-    Rectangle (..),
-    rectanglerize,
-    combineRectangles,
-    buildRow,
-    widthOf,
-    heightOf,
     tableToMarkdown,
 ) where
 
@@ -26,13 +20,20 @@ import Text.Pandoc (
     Alignment (..),
     Attr,
     Block (..),
+    Caption (..),
+    Cell (..),
+    ColSpec (..),
+    ColWidth (..),
     Format (..),
     Inline (..),
     ListAttributes,
     MathType (..),
     Pandoc (..),
     QuoteType (..),
-    TableCell,
+    Row (..),
+    TableBody (..),
+    TableFoot (..),
+    TableHead (..),
  )
 import Text.Pandoc.Shared (orderedListMarkers)
 
@@ -70,7 +71,7 @@ convertBlock margin block =
             OrderedList attrs blockss -> orderedlistToMarkdown margin attrs blockss
             DefinitionList blockss -> definitionlistToMarkdown margin blockss
             HorizontalRule -> "---\n"
-            Table caption alignments relatives headers rows -> tableToMarkdown caption alignments relatives headers rows
+            Table attr caption alignments header rows footer -> tableToMarkdown attr caption alignments header rows footer
             Div attr blocks -> divToMarkdown margin attr blocks
 
 {-
@@ -234,58 +235,102 @@ attributesToMarkdown (identifier, classes, pairs) =
         ps = fmap (\(k, v) -> intoRope k <> "=" <> intoRope v) pairs
      in "{" <> i <> mconcat (intersperse " " (cs ++ ps)) <> "}"
 
+data TableCell = TableCell
+{-# DEPRECATED TableCell "" #-}
+
 tableToMarkdown ::
-    [Inline] ->
-    [Alignment] ->
-    [Double] ->
-    [TableCell] ->
-    [[TableCell]] ->
+    Attr ->
+    Caption ->
+    [ColSpec] ->
+    TableHead ->
+    [TableBody] ->
+    TableFoot ->
     Rope
-tableToMarkdown _ alignments relatives headers rows =
+tableToMarkdown attr caption alignments thead tbodys tfoot =
     mconcat
         ( intersperse
             "\n"
-            [ wrapperLine
-            , header
-            , underlineHeaders
-            , body
-            , wrapperLine
+            [ surround pipeChar headerline
+            , surround pipeChar betweenline
+            , surround pipeChar bodylines
             ]
         )
         <> "\n"
   where
-    header = rowToMarkdown headers
-    bodylines = fmap rowToMarkdown rows
-    body = mconcat (intersperse "\n\n" bodylines)
-    sizes :: [Int]
-    sizes =
+    colonChar = singletonRope ':'
+    dashChar = singletonRope '-'
+    pipeChar = singletonRope '|'
+    spaceChar = singletonRope ' '
+
+    surround :: Rope -> Rope -> Rope
+    surround char text = char <> text <> char
+
+    headerline = headerToMarkdown thead
+
+    betweenline =
+        foldl' (<>) emptyRope
+            . intersperse pipeChar
+            . fmap columnToMarkdown
+            $ alignments
+
+    bodylines = bodiesToMarkdown tbodys
+
+    headerToMarkdown :: TableHead -> Rope
+    headerToMarkdown (TableHead _ [row]) = rowToMarkdown row
+    headerToMarkdown _ = impureThrow (NotSafe "What do we do with this (header)")
+
+    columnToMarkdown :: (Alignment, ColWidth) -> Rope
+    columnToMarkdown (align, col) =
         let total = fromIntegral __WIDTH__
-            -- there's a weird thing where sometimes (in pipe tables?) the
-            -- value of relative is 0. If that happens, pick a value.
-            -- TODO Better heuristic? Because, this will break if cell too wide.
-            f x
-                | x == 0.0 = 14
-                | otherwise = floor (total * x)
-         in fmap (fromInteger . f) relatives
-    overall = sum sizes + (length headers) - 1
-    wrapperLine = intoRope (replicate overall '-')
-    rowToMarkdown :: [TableCell] -> Rope
-    rowToMarkdown =
-        buildRow sizes . fmap convert
-            . zipWith3
-                (\size align (block : _) -> (size, align, block))
-                sizes
-                alignments
-    underlineHeaders :: Rope
-    underlineHeaders =
-        foldl' (<>) emptyRope . intersperse " "
-            . fmap (\size -> intoRope (replicate size '-'))
-            . take (length headers)
-            $ sizes
-    convert :: (Int, Alignment, Block) -> Rectangle
-    convert (size, align, Plain inlines) =
-        rectanglerize size align (plaintextToMarkdown size inlines)
-    convert (_, _, _) =
+            begin = case align of
+                AlignLeft -> colonChar
+                AlignCenter -> colonChar
+                _ -> dashChar
+
+            num = case col of
+                ColWidth x -> floor (total * x)
+                ColWidthDefault -> 6
+            middle = mconcat (replicate num dashChar)
+
+            end = case align of
+                AlignRight -> colonChar
+                AlignCenter -> colonChar
+                _ -> dashChar
+         in begin <> middle <> end
+
+    bodiesToMarkdown :: [TableBody] -> Rope
+    bodiesToMarkdown = mconcat . intersperse "\n" . fmap bodyToMarkdown
+
+    bodyToMarkdown :: TableBody -> Rope
+    bodyToMarkdown (TableBody _ rowHeadCols iHeads [row]) = rowToMarkdown row
+    bodyToMarkdown _ = impureThrow (NotSafe "What do we do with this (body)")
+
+    rowToMarkdown :: Row -> Rope
+    rowToMarkdown (Row attr cells) =
+        foldl' (<>) emptyRope
+            . intersperse pipeChar
+            . fmap (surround spaceChar . cellToMarkdown)
+            $ cells
+
+    cellToMarkdown :: Cell -> Rope
+    cellToMarkdown (Cell _ _ rowSpan colSpan [block]) =
+        convert block
+    cellToMarkdown _ =
+        impureThrow (NotSafe "Multiple Blocks encountered")
+
+    {-
+        underlineHeaders :: Rope
+        underlineHeaders =
+            foldl' (<>) emptyRope . intersperse " "
+                . fmap (\size -> intoRope (replicate size '-'))
+                . take (widthRope headerline)
+                $
+    -}
+
+    convert :: Block -> Rope
+    convert (Plain inlines) =
+        plaintextToMarkdown 100000 inlines
+    convert _ =
         impureThrow (NotSafe "Incorrect Block type encountered")
 
 data NotSafe = NotSafe String
@@ -293,33 +338,7 @@ data NotSafe = NotSafe String
 
 instance Exception NotSafe
 
-data Rectangle = Rectangle Int Int [Rope]
-    deriving (Eq, Show, Generic, NFData)
-
-widthOf :: Rectangle -> Int
-widthOf (Rectangle size _ _) = size
-
-heightOf :: Rectangle -> Int
-heightOf (Rectangle _ height _) = height
-
-rowsFrom :: Rectangle -> [Rope]
-rowsFrom (Rectangle _ _ texts) = texts
-
-instance Semigroup Rectangle where
-    (<>) = combineRectangles
-
-instance Monoid Rectangle where
-    mempty = Rectangle 0 0 []
-
-rectanglerize :: Int -> Alignment -> Rope -> Rectangle
-rectanglerize size align text =
-    let ls = breakLines (wrap size text)
-        fix l
-            | widthRope l < size =
-                let padding = size - widthRope l
-                    (left, remain) = divMod padding 2
-                    right = left + remain
-                 in case align of
+{-                 in case align of
                         AlignCenter -> intoRope (replicate left ' ') <> l <> intoRope (replicate right ' ')
                         AlignRight -> intoRope (replicate padding ' ') <> l
                         AlignLeft -> l <> intoRope (replicate padding ' ')
@@ -328,43 +347,7 @@ rectanglerize size align text =
                 AlignRight -> impureThrow (NotSafe "Column width insufficient to show alignment")
                 _ -> l
             | otherwise = impureThrow (NotSafe "Line wider than permitted size")
-        result = foldr (\l acc -> fix l : acc) [] ls
-     in Rectangle size (length result) result
-
-combineRectangles :: Rectangle -> Rectangle -> Rectangle
-combineRectangles rect1@(Rectangle size1 height1 _) rect2@(Rectangle size2 height2 _) =
-    let target = max height1 height2
-        extra1 = target - height1
-        extra2 = target - height2
-        padRows :: Int -> Rectangle -> [Rope]
-        padRows count (Rectangle size _ texts) =
-            let texts' = texts ++ replicate count (intoRope (replicate size ' '))
-             in texts'
-        texts1' = padRows extra1 rect1
-        texts2' = padRows extra2 rect2
-        pairs = zip texts1' texts2'
-        result = foldr (\(text1, text2) texts -> text1 <> text2 : texts) [] pairs
-     in Rectangle (size1 + size2) target result
-
-ensureWidth :: Int -> Rectangle -> Rectangle
-ensureWidth request rect =
-    if widthOf rect < request
-        then rectanglerize request AlignLeft (foldl' (<>) emptyRope (rowsFrom rect))
-        else rect
-
-buildRow :: [Int] -> [Rectangle] -> Rope
-buildRow cellWidths rects =
-    let pairs = zip cellWidths rects
-        rects' = fmap (\(desired, rect) -> ensureWidth desired rect) pairs
-        wall = vertical ' ' rects'
-        result = foldl' (<>) mempty . intersperse wall $ rects'
-     in foldl' (<>) emptyRope (intersperse "\n" (rowsFrom result))
-
-vertical :: Char -> [Rectangle] -> Rectangle
-vertical ch rects =
-    let height = maximum (fmap heightOf rects)
-        border = replicate height (intoRope [ch])
-     in Rectangle 1 height border
+-}
 
 ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 

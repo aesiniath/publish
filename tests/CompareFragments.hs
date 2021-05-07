@@ -26,7 +26,7 @@ fragments =
     ("bullet list", "tests/fragments/BulletList.markdown"),
     ("ordered list", "tests/fragments/OrderedList.markdown"),
     ("definition list", "tests/fragments/DefinitionList.markdown"),
-    ("multiline table", "tests/fragments/MultilineTable.markdown"),
+    ("pipe table", "tests/fragments/PipeTable.md"),
     ("weird inlines", "tests/fragments/WeirdInlines.markdown")
   ]
 
