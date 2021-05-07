@@ -9,20 +9,18 @@ module PandocToMarkdown (
     tableToMarkdown,
 ) where
 
-import Control.DeepSeq (NFData)
 import Core.System.Base
 import Core.Text
 import Data.Foldable (foldl')
 import Data.List (intersperse)
 import qualified Data.Text as T (Text, null)
-import GHC.Generics (Generic)
 import Text.Pandoc (
     Alignment (..),
     Attr,
     Block (..),
     Caption (..),
     Cell (..),
-    ColSpec (..),
+    ColSpec,
     ColWidth (..),
     Format (..),
     Inline (..),
@@ -235,9 +233,6 @@ attributesToMarkdown (identifier, classes, pairs) =
         ps = fmap (\(k, v) -> intoRope k <> "=" <> intoRope v) pairs
      in "{" <> i <> mconcat (intersperse " " (cs ++ ps)) <> "}"
 
-data TableCell = TableCell
-{-# DEPRECATED TableCell "" #-}
-
 tableToMarkdown ::
     Attr ->
     Caption ->
@@ -250,9 +245,9 @@ tableToMarkdown attr caption alignments thead tbodys tfoot =
     mconcat
         ( intersperse
             "\n"
-            [ surround pipeChar headerline
-            , surround pipeChar betweenline
-            , surround pipeChar bodylines
+            [ headerline
+            , betweenline
+            , bodylines
             ]
         )
         <> "\n"
@@ -261,6 +256,7 @@ tableToMarkdown attr caption alignments thead tbodys tfoot =
     dashChar = singletonRope '-'
     pipeChar = singletonRope '|'
     spaceChar = singletonRope ' '
+    newlineChar = singletonRope '\n'
 
     surround :: Rope -> Rope -> Rope
     surround char text = char <> text <> char
@@ -268,7 +264,7 @@ tableToMarkdown attr caption alignments thead tbodys tfoot =
     headerline = headerToMarkdown thead
 
     betweenline =
-        foldl' (<>) emptyRope
+        surround pipeChar . foldl' (<>) emptyRope
             . intersperse pipeChar
             . fmap columnToMarkdown
             $ alignments
@@ -299,15 +295,17 @@ tableToMarkdown attr caption alignments thead tbodys tfoot =
          in begin <> middle <> end
 
     bodiesToMarkdown :: [TableBody] -> Rope
-    bodiesToMarkdown = mconcat . intersperse "\n" . fmap bodyToMarkdown
+    bodiesToMarkdown = mconcat . intersperse newlineChar . fmap bodyToMarkdown
 
     bodyToMarkdown :: TableBody -> Rope
-    bodyToMarkdown (TableBody _ rowHeadCols iHeads [row]) = rowToMarkdown row
-    bodyToMarkdown _ = impureThrow (NotSafe "What do we do with this (body)")
+    bodyToMarkdown (TableBody _ rowHeadCols iHeads rows) =
+        foldl' (<>) emptyRope
+        . intersperse newlineChar
+        . fmap rowToMarkdown $ rows
 
     rowToMarkdown :: Row -> Rope
     rowToMarkdown (Row attr cells) =
-        foldl' (<>) emptyRope
+        surround pipeChar . foldl' (<>) emptyRope
             . intersperse pipeChar
             . fmap (surround spaceChar . cellToMarkdown)
             $ cells
