@@ -300,8 +300,9 @@ tableToMarkdown attr caption alignments thead tbodys tfoot =
     bodyToMarkdown :: TableBody -> Rope
     bodyToMarkdown (TableBody _ rowHeadCols iHeads rows) =
         foldl' (<>) emptyRope
-        . intersperse newlineChar
-        . fmap rowToMarkdown $ rows
+            . intersperse newlineChar
+            . fmap rowToMarkdown
+            $ rows
 
     rowToMarkdown :: Row -> Rope
     rowToMarkdown (Row attr cells) =
