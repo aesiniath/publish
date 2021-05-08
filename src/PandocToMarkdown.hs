@@ -372,9 +372,20 @@ and replace the escaped space on output.
 -}
 stringToMarkdown :: T.Text -> Rope
 stringToMarkdown =
-    mconcat . intersperse "\\ " . breakPieces isNonBreaking . intoRope
+    escapeSpecialWith '\x00a0' ' '
+        . escapeSpecial '['
+        . escapeSpecial ']'
+        . escapeSpecial '_'
+        . intoRope
+
+escapeSpecial :: Char -> Rope -> Rope
+escapeSpecial c = escapeSpecialWith c c
+
+escapeSpecialWith :: Char -> Char -> Rope -> Rope
+escapeSpecialWith needle replacement =
+    mconcat . intersperse (singletonRope '\\' <> singletonRope replacement) . breakPieces isNeedle . intoRope
   where
-    isNonBreaking c = c == '\x00a0'
+    isNeedle c = c == needle
 
 imageToMarkdown :: Attr -> [Inline] -> (T.Text, T.Text) -> Rope
 imageToMarkdown attr inlines (url, title) =
