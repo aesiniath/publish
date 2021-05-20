@@ -1,5 +1,5 @@
 name: publish
-version: 2.1.5
+version: 2.2.1
 synopsis: Publishing tools for papers, books, and presentations
 description: |
   Tools for rendering markdown-centric documents into PDFs.
@@ -14,9 +14,9 @@ license: MIT
 license-file: LICENSE
 author: Andrew Cowie <istathar@gmail.com>
 maintainer: Andrew Cowie <istathar@gmail.com>
-copyright: © 2016-2020 Athae Eredh Siniath and Others
+copyright: © 2016-2021 Athae Eredh Siniath and Others
 category: Text
-tested-with: GHC == 8.8
+tested-with: GHC == 8.10
 github: aesiniath/publish
 
 dependencies:
@@ -27,14 +27,14 @@ dependencies:
  - directory
  - filepath
  - megaparsec
- - pandoc-types
- - pandoc
+ - pandoc-types >= 1.22
+ - pandoc >= 2.11
  - template-haskell
  - text
  - typed-process
- - core-text >= 0.2.2.3
+ - core-text >= 0.3.0
  - core-data
- - core-program >= 0.2.2.3
+ - core-program >= 0.2.7
  - unix
  - unordered-containers
 
