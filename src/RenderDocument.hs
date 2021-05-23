@@ -70,11 +70,10 @@ program = do
             void (renderDocument (mode, copy) bookfile)
         Cycle -> do
             -- use inotify to rebuild on changes
-            forever (renderDocument (mode, copy) bookfile >>= waitForChange)
+            forever (renderDocument (mode, copy) bookfile >>= waitForChange >> resetTimer)
 
 renderDocument :: (Mode, Copy) -> FilePath -> Program Env [FilePath]
 renderDocument (mode, copy) file = do
-    resetTimer
     event "Read .book file"
     book <- processBookFile file
 
