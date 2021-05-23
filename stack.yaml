@@ -1,4 +1,4 @@
-resolver: lts-17.10
+resolver: lts-17.12
 
 packages:
   - .
@@ -6,6 +6,7 @@ packages:
 extra-deps:
   - core-program-0.2.7.1
   - hslua-module-path-0.1.0.1
+  - texmath-0.12.2
   - pandoc-2.13
 
 nix:
