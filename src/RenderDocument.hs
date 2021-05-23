@@ -61,6 +61,7 @@ program = do
     params <- getCommandLine
     (mode, copy) <- extractMode params
 
+    resetTimer
     event "Identify .book file"
     bookfile <- extractBookFile params
 
