@@ -2,7 +2,12 @@ name: publish
 version: 2.2.2
 synopsis: Publishing tools for papers, books, and presentations
 description: |
-  Tools for rendering markdown-centric documents into PDFs.
+  Tools for rendering markdown-centric documents into PDFs. There are two
+  programs:
+  
+    [/render/]for generating PDFs from Markdown and LaTeX input; and
+
+    [/format/]for word-wrapping and nicely formatting Markdown files.
   
   A description of this package, a list of features, and some background
   to its design is contained in the
