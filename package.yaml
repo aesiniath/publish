@@ -39,7 +39,7 @@ dependencies:
  - typed-process
  - core-text >= 0.3.0
  - core-data
- - core-program >= 0.2.7
+ - core-program >= 0.2.9
  - unix
  - unordered-containers
 

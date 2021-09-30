@@ -25,7 +25,7 @@ main = do
         configure
             version
             env
-            ( simple
+            ( simpleConfig
                 [ Option
                     "builtin-preamble"
                     (Just 'p')
