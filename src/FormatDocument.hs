@@ -28,16 +28,16 @@ import Text.Pandoc (
 
 program :: Program None ()
 program = do
-    event "Identify document fragment"
+    info "Identify document fragment"
     file <- getFragmentName
 
-    event "Load to Pandoc internal representation"
+    info "Load to Pandoc internal representation"
     parsed <- loadFragment file
 
-    event "Write to Markdown format"
+    info "Write to Markdown format"
     writeResult file parsed
 
-    event "Complete"
+    info "Complete"
 
 getFragmentName :: Program None FilePath
 getFragmentName = do

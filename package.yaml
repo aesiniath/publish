@@ -1,5 +1,5 @@
 name: publish
-version: 2.2.2
+version: 2.2.3
 synopsis: Publishing tools for papers, books, and presentations
 description: |
   Tools for rendering markdown-centric documents into PDFs. There are two
@@ -21,7 +21,7 @@ author: Andrew Cowie <istathar@gmail.com>
 maintainer: Andrew Cowie <istathar@gmail.com>
 copyright: © 2016-2021 Athae Eredh Siniath and Others
 category: Text
-tested-with: GHC == 8.10.4
+tested-with: GHC == 8.10.7
 github: aesiniath/publish
 
 dependencies:
@@ -37,9 +37,9 @@ dependencies:
  - template-haskell
  - text
  - typed-process
- - core-text >= 0.3.0
+ - core-text >= 0.3.2
  - core-data
- - core-program >= 0.2.9
+ - core-program >= 0.2.12
  - unix
  - unordered-containers
 

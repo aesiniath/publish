@@ -61,7 +61,7 @@ program = do
     params <- getCommandLine
     (mode, copy) <- extractMode params
 
-    event "Identify .book file"
+    info "Identify .book file"
     bookfile <- extractBookFile params
 
     case mode of
@@ -74,10 +74,10 @@ program = do
 
 renderDocument :: (Mode, Copy) -> FilePath -> Program Env [FilePath]
 renderDocument (mode, copy) file = do
-    event "Read .book file"
+    info "Read .book file"
     book <- processBookFile file
 
-    event "Setup temporary directory"
+    info "Setup temporary directory"
     setupTargetFile file
     setupPreambleFile
     validatePreamble book
@@ -86,21 +86,21 @@ renderDocument (mode, copy) file = do
     let fragments = fragmentsFrom book
     let trailers = trailersFrom book
 
-    event "Convert preamble fragments and begin marker to LaTeX"
+    info "Convert preamble fragments and begin marker to LaTeX"
     mapM_ processFragment preambles
     setupBeginningFile
 
-    event "Convert document fragments to LaTeX"
+    info "Convert document fragments to LaTeX"
     mapM_ processFragment fragments
 
-    event "Convert end marker and trailing fragments to LaTeX"
+    info "Convert end marker and trailing fragments to LaTeX"
     setupEndingFile
     mapM_ processFragment trailers
 
-    event "Write intermediate LaTeX file"
+    info "Write intermediate LaTeX file"
     produceResult
 
-    event "Render document to PDF"
+    info "Render document to PDF"
     catch
         ( do
             renderPDF
@@ -313,6 +313,7 @@ processBookFile file = do
         case probe of
             True -> return True
             False -> do
+                warn "Fragment not found"
                 write ("warning: Fragment \"" <> intoRope fragment <> "\" not found, skipping")
                 return False
 
@@ -432,7 +433,7 @@ convertImage file = do
 
         case exit of
             ExitFailure _ -> do
-                event "Image processing failed"
+                info "Image processing failed"
                 debug "stderr" (intoRope err)
                 debug "stdout" (intoRope out)
                 write ("error: Unable to convert " <> intoRope file <> " from SVG to PDF")
@@ -512,7 +513,7 @@ renderPDF = do
     (exit, out, err) <- execProcess latexmk
     case exit of
         ExitFailure _ -> do
-            event "Render failed"
+            info "Render failed"
             debug "stderr" (intoRope err)
             debug "stdout" (intoRope out)
             write (parseOutputForError tmpdir out)
@@ -528,11 +529,11 @@ copyHere = do
     changed <- isNewer result final
     case changed of
         True -> do
-            event "Copy resultant PDF to starting directory"
+            info "Copy resultant PDF to starting directory"
             debugS "result" result
             debugS "final" final
             liftIO $ do
                 copyFileWithMetadata result final
-            event "Complete"
+            info "Complete"
         False -> do
-            event "Result unchanged"
+            info "Result unchanged"

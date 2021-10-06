@@ -23,7 +23,7 @@ main = do
     configure
       version
       None
-      ( simple
+      ( simpleConfig
           [ Option
               "inplace"
               (Just 'i')
