@@ -4,10 +4,7 @@ packages:
   - .
 
 extra-deps:
-- git: https://github.com/aesiniath/unbeliever.git
-  commit: dd12832784502584b4a255e312c2b60efba0ab88
-  subdirs:
-  - core-text
-  - core-data
-  - core-program
+ - core-text-0.3.4.0
+ - core-data-0.2.1.10
+ - core-program-0.2.12.0
 
