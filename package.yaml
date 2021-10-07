@@ -37,7 +37,7 @@ dependencies:
  - template-haskell
  - text
  - typed-process
- - core-text >= 0.3.2
+ - core-text >= 0.3.4
  - core-data
  - core-program >= 0.2.12
  - unix
