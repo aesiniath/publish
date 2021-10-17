@@ -10,6 +10,7 @@ import Control.Monad (filterM, forM_, forever, void)
 import Core.Data
 import Core.Program
 import Core.System
+import Core.Telemetry
 import Core.Text
 import Data.Char (isSpace)
 import qualified Data.List as List (dropWhileEnd, null)
@@ -74,46 +75,58 @@ program = do
 
 renderDocument :: (Mode, Copy) -> FilePath -> Program Env [FilePath]
 renderDocument (mode, copy) file = do
-    info "Read .book file"
-    book <- processBookFile file
+    setServiceName "render  "
+    beginTrace $ do
+        encloseSpan "Render document" $ do
+            telemetry
+                [ metric "bookfile" file
+                ]
 
-    info "Setup temporary directory"
-    setupTargetFile file
-    setupPreambleFile
-    validatePreamble book
+            book <- encloseSpan "Setup" $ do
+                info "Read .book file"
+                book <- processBookFile file
 
-    let preambles = preamblesFrom book
-    let fragments = fragmentsFrom book
-    let trailers = trailersFrom book
+                info "Setup temporary directory"
+                setupTargetFile file
+                setupPreambleFile
+                validatePreamble book
 
-    info "Convert preamble fragments and begin marker to LaTeX"
-    mapM_ processFragment preambles
-    setupBeginningFile
+                pure book
 
-    info "Convert document fragments to LaTeX"
-    mapM_ processFragment fragments
+            let preambles = preamblesFrom book
+            let fragments = fragmentsFrom book
+            let trailers = trailersFrom book
 
-    info "Convert end marker and trailing fragments to LaTeX"
-    setupEndingFile
-    mapM_ processFragment trailers
+            encloseSpan "Convert fragments" $ do
+                info "Convert preamble fragments and begin marker to LaTeX"
+                mapM_ processFragment preambles
+                setupBeginningFile
 
-    info "Write intermediate LaTeX file"
-    produceResult
+                info "Convert document fragments to LaTeX"
+                mapM_ processFragment fragments
 
-    info "Render document to PDF"
-    catch
-        ( do
-            renderPDF
-            case copy of
-                InstallPdf -> copyHere
-                NoCopyPdf -> return ()
-        )
-        ( \(e :: ExitCode) -> case mode of
-            Once -> throw e
-            Cycle -> return ()
-        )
+                info "Convert end marker and trailing fragments to LaTeX"
+                setupEndingFile
+                mapM_ processFragment trailers
 
-    return (uniqueList file preambles fragments trailers)
+                info "Write intermediate LaTeX file"
+                produceResult
+
+            encloseSpan "Render LaTeX to PDF" $ do
+                info "Render document to PDF"
+                catch
+                    ( do
+                        renderPDF
+                        case copy of
+                            InstallPdf -> copyHere
+                            NoCopyPdf -> return ()
+                    )
+                    ( \(e :: ExitCode) -> case mode of
+                        Once -> throw e
+                        Cycle -> return ()
+                    )
+
+            pure (uniqueList file preambles fragments trailers)
 
 --
 -- Quickly reduce the fragment names to a unique list so we don't waste
@@ -363,28 +376,33 @@ convertMarkdown file =
                 { writerTopLevelDivision = TopLevelSection
                 }
      in do
-            env <- getApplicationState
-            let tmpdir = tempDirectoryFrom env
-                file' = replaceExtension file ".latex"
-                target = tmpdir ++ "/" ++ file'
-                files = intermediateFilenamesFrom env
+            encloseSpan "convertMarkdown" $ do
+                env <- getApplicationState
+                let tmpdir = tempDirectoryFrom env
+                    file' = replaceExtension file ".latex"
+                    target = tmpdir ++ "/" ++ file'
+                    files = intermediateFilenamesFrom env
 
-            ensureDirectory target
-            ifNewer file target $ do
-                debugS "target" target
-                liftIO $ do
-                    contents <- T.readFile file
+                ensureDirectory target
+                ifNewer file target $ do
+                    debugS "target" target
+                    liftIO $ do
+                        contents <- T.readFile file
 
-                    latex <- runIOorExplode $ do
-                        parsed <- readMarkdown readingOptions contents
-                        writeLaTeX writingOptions parsed
+                        latex <- runIOorExplode $ do
+                            parsed <- readMarkdown readingOptions contents
+                            writeLaTeX writingOptions parsed
 
-                    withFile target WriteMode $ \handle -> do
-                        T.hPutStrLn handle latex
-                        T.hPutStr handle "\n"
+                        withFile target WriteMode $ \handle -> do
+                            T.hPutStrLn handle latex
+                            T.hPutStr handle "\n"
 
-            let env' = env{intermediateFilenamesFrom = file' : files}
-            setApplicationState env'
+                let env' = env{intermediateFilenamesFrom = file' : files}
+                setApplicationState env'
+
+                telemetry
+                    [ metric "file" file
+                    ]
 
 {-
 If a source fragment is already LaTeX, simply copy it through to
@@ -392,19 +410,23 @@ the target file.
 -}
 passthroughLaTeX :: FilePath -> Program Env ()
 passthroughLaTeX file = do
-    env <- getApplicationState
-    let tmpdir = tempDirectoryFrom env
-        target = tmpdir ++ "/" ++ file
-        files = intermediateFilenamesFrom env
+    encloseSpan "passthroughLaTeX" $ do
+        env <- getApplicationState
+        let tmpdir = tempDirectoryFrom env
+            target = tmpdir ++ "/" ++ file
+            files = intermediateFilenamesFrom env
 
-    ensureDirectory target
-    ifNewer file target $ do
-        debugS "target" target
-        liftIO $ do
-            copyFileWithMetadata file target
+        ensureDirectory target
+        ifNewer file target $ do
+            debugS "target" target
+            liftIO $ do
+                copyFileWithMetadata file target
 
-    let env' = env{intermediateFilenamesFrom = file : files}
-    setApplicationState env'
+        let env' = env{intermediateFilenamesFrom = file : files}
+        setApplicationState env'
+        telemetry
+            [ metric "file" file
+            ]
 
 {-
 Images in SVG format need to be converted to PDF to be able to be
@@ -413,45 +435,53 @@ is slightly shocking.
 -}
 convertImage :: FilePath -> Program Env ()
 convertImage file = do
-    env <- getApplicationState
-    let tmpdir = tempDirectoryFrom env
-        basepath = dropExtension file
-        target = tmpdir ++ "/" ++ basepath ++ ".pdf"
-        buffer = tmpdir ++ "/" ++ basepath ++ "~tmp.pdf"
-        inkscape =
-            [ "inkscape"
-            , "--export-type=pdf"
-            , "--export-filename=" ++ buffer
-            , file
+    encloseSpan "convertImage" $ do
+        telemetry
+            [ metric "file" file
             ]
+        env <- getApplicationState
+        let tmpdir = tempDirectoryFrom env
+            basepath = dropExtension file
+            target = tmpdir ++ "/" ++ basepath ++ ".pdf"
+            buffer = tmpdir ++ "/" ++ basepath ++ "~tmp.pdf"
+            inkscape =
+                [ "inkscape"
+                , "--export-type=pdf"
+                , "--export-filename=" ++ buffer
+                , file
+                ]
 
-    ifNewer file target $ do
-        debugS "target" target
-        (exit, out, err) <- do
-            ensureDirectory target
-            execProcess inkscape
+        ifNewer file target $ do
+            debugS "target" target
+            (exit, out, err) <- do
+                ensureDirectory target
+                execProcess inkscape
 
-        case exit of
-            ExitFailure _ -> do
-                info "Image processing failed"
-                debug "stderr" (intoRope err)
-                debug "stdout" (intoRope out)
-                write ("error: Unable to convert " <> intoRope file <> " from SVG to PDF")
-                throw exit
-            ExitSuccess -> liftIO $ do
-                renameFile buffer target
+            case exit of
+                ExitFailure _ -> do
+                    info "Image processing failed"
+                    debug "stderr" (intoRope err)
+                    debug "stdout" (intoRope out)
+                    write ("error: Unable to convert " <> intoRope file <> " from SVG to PDF")
+                    throw exit
+                ExitSuccess -> liftIO $ do
+                    renameFile buffer target
 
 passthroughImage :: FilePath -> Program Env ()
 passthroughImage file = do
-    env <- getApplicationState
-    let tmpdir = tempDirectoryFrom env
-        target = tmpdir ++ "/" ++ file
+    encloseSpan "passthroughImage" $ do
+        telemetry
+            [ metric "file" file
+            ]
+        env <- getApplicationState
+        let tmpdir = tempDirectoryFrom env
+            target = tmpdir ++ "/" ++ file
 
-    ensureDirectory target
-    ifNewer file target $ do
-        debugS "target" target
-        liftIO $ do
-            copyFileWithMetadata file target
+        ensureDirectory target
+        ifNewer file target $ do
+            debugS "target" target
+            liftIO $ do
+                copyFileWithMetadata file target
 
 {-
 Finish up by writing the intermediate "master" file.
@@ -537,3 +567,7 @@ copyHere = do
             info "Complete"
         False -> do
             info "Result unchanged"
+
+    telemetry
+        [ metric "changed" changed
+        ]
