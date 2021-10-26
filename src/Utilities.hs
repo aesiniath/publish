@@ -37,28 +37,6 @@ ensureDirectory target =
             when (not probe) $ do
                 createDirectoryIfMissing True subdir
 
-{-
-Thin wrapper around **typed-process**'s `readProcess` so that the command
-to be executed can be logged. Bit of an annoyance that the command and the
-arguments have to be specified to `proc` separately, but that's _execvp(3)_
-for you.
-
-TODO this could potentially move to the **unbeliever** library
--}
-execProcess :: [String] -> Program t (ExitCode, Rope, Rope)
-execProcess [] = error "No command provided"
-execProcess (cmd : args) =
-    let task = proc cmd args
-        task' = setStdin closed task
-        command = List.intercalate " " (cmd : args)
-     in do
-            debugS "command" command
-
-            (exit, out, err) <- liftIO $ do
-                readProcess task'
-
-            return (exit, intoRope out, intoRope err)
-
 {- |
  If the source file is newer than the target file, then run an action. For
  example, if you want to install a file but only do so if the file has been
