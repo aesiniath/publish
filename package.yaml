@@ -39,8 +39,8 @@ dependencies:
  - typed-process
  - core-text >= 0.3.4
  - core-data
- - core-program >= 0.2.12
- - core-telemetry
+ - core-program >= 0.3.1
+ - core-telemetry >= 0.1.7.2
  - unix
  - unordered-containers
 
