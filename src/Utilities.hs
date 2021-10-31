@@ -4,7 +4,6 @@
 
 module Utilities (
     ensureDirectory,
-    execProcess,
     ifNewer,
     isNewer,
 ) where

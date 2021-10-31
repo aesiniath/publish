@@ -51,7 +51,7 @@ import Text.Pandoc (
     writeLaTeX,
     writerTopLevelDivision,
  )
-import Utilities (ensureDirectory, execProcess, ifNewer, isNewer)
+import Utilities (ensureDirectory, ifNewer, isNewer)
 
 data Mode = Once | Cycle
 
@@ -75,7 +75,7 @@ program = do
 
 renderDocument :: (Mode, Copy) -> FilePath -> Program Env [FilePath]
 renderDocument (mode, copy) file = do
-    setServiceName "render  "
+    setServiceName "render"
     beginTrace $ do
         encloseSpan "Render document" $ do
             telemetry
