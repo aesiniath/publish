@@ -84,6 +84,6 @@ main = do
                 ]
             )
 
-    context' <- initializeTelemetry [consoleExporter,structuredExporter,honeycombExporter] context
+    context' <- initializeTelemetry [consoleExporter, structuredExporter, honeycombExporter] context
 
     executeWith context' program

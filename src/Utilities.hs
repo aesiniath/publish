@@ -12,17 +12,13 @@ import Chrono.Compat (convertToUTC)
 import Control.Monad (when)
 import Core.Program
 import Core.System
-import Core.Text
-import qualified Data.List as List (intercalate)
 import System.Directory (
     createDirectoryIfMissing,
     doesDirectoryExist,
     doesFileExist,
     getModificationTime,
  )
-import System.Exit (ExitCode (..))
 import System.FilePath.Posix (takeDirectory)
-import System.Process.Typed (closed, proc, readProcess, setStdin)
 
 {-
 Some source files live in subdirectories. Replicate that directory
