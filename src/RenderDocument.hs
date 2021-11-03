@@ -15,7 +15,6 @@ import Core.Telemetry
 import Core.Text
 import Data.Char (isSpace)
 import qualified Data.List as List (dropWhileEnd, null)
-import Data.Maybe (isJust)
 import qualified Data.Text.IO as T
 import Environment (Bookfile (..), Env (..))
 import LatexOutputReader (parseOutputForError)
@@ -178,13 +177,12 @@ setupTargetFile file = do
     let start = startingDirectoryFrom env
     let dotfile = start ++ "/.target"
 
-    params <- getCommandLine
-    tmpdir <- case lookupOptionValue "temp" params of
+    tmpdir <- queryOptionValue "temp" >>= \case
         Just dir -> do
             -- Append a slash so that /tmp/booga is taken as a directory.
             -- Otherwise, you end up ensuring /tmp exists.
-            ensureDirectory (dir ++ "/")
-            return dir
+            ensureDirectory (fromRope dir ++ "/")
+            return (fromRope dir)
         Nothing ->
             liftIO $
                 catch
@@ -500,38 +498,40 @@ produceResult = do
                 let (path, name) = splitFileName file
                 hPutStrLn handle ("\\subimport{" ++ path ++ "}{" ++ name ++ "}")
 
-getUserID :: Program a String
+getUserID :: Program a Rope
 getUserID = liftIO $ do
     uid <- getEffectiveUserID
     gid <- getEffectiveGroupID
-    return (show uid ++ ":" ++ show gid)
+    return (intoRope (show uid ++ ":" ++ show gid))
 
 renderPDF :: Program Env ()
 renderPDF = do
     env <- getApplicationState
 
-    let master = masterFilenameFrom env
-        tmpdir = tempDirectoryFrom env
+    let master = intoRope (masterFilenameFrom env)
+        tmpdir = intoRope (tempDirectoryFrom env)
 
     user <- getUserID
 
-    params <- getCommandLine
-    let command = case lookupOptionValue "docker" params of
+    command <-
+        queryOptionValue "docker" >>= \case
             Just image ->
-                [ "docker"
-                , "run"
-                , "--rm=true"
-                , "--volume=" ++ tmpdir ++ ":" ++ tmpdir
-                , "--user=" ++ user
-                , image
-                , "latexmk"
-                ]
+                pure
+                    [ "docker"
+                    , "run"
+                    , "--rm=true"
+                    , "--volume=" <> tmpdir <> ":" <> tmpdir
+                    , "--user=" <> user
+                    , intoRope image
+                    , "latexmk"
+                    ]
             Nothing ->
-                [ "latexmk"
-                ]
-        options =
+                pure
+                    [ "latexmk"
+                    ]
+    let options =
             [ "-lualatex"
-            , "-output-directory=" ++ tmpdir
+            , "-output-directory=" <> tmpdir
             , "-interaction=nonstopmode"
             , "-halt-on-error"
             , "-file-line-error"
@@ -540,13 +540,13 @@ renderPDF = do
             ]
         latexmk = command ++ options
 
-    (exit, out, err) <- execProcess (fmap intoRope latexmk)
+    (exit, out, err) <- execProcess latexmk
     case exit of
         ExitFailure _ -> do
             info "Render failed"
-            debug "stderr" (intoRope err)
-            debug "stdout" (intoRope out)
-            write (parseOutputForError tmpdir out)
+            debug "stderr" err
+            debug "stdout" out
+            write (parseOutputForError (fromRope tmpdir) out)
             throw exit
         ExitSuccess -> return ()
 
