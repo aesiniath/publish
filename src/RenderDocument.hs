@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -59,11 +60,10 @@ data Copy = InstallPdf | NoCopyPdf
 
 program :: Program Env ()
 program = do
-    params <- getCommandLine
-    (mode, copy) <- extractMode params
+    (mode, copy) <- extractMode
 
     info "Identify .book file"
-    bookfile <- extractBookFile params
+    bookfile <- extractBookFile
 
     case mode of
         Once -> do
@@ -137,39 +137,40 @@ uniqueList file preambles fragments trailers =
     let files = insertElement file (intoSet trailers <> (intoSet preambles <> intoSet fragments))
      in fromSet files
 
-extractMode :: Parameters -> Program Env (Mode, Copy)
-extractMode params =
-    let mode = case lookupOptionFlag "watch" params of
-            Just False -> error "Invalid State"
-            Just True -> Cycle
-            Nothing -> Once
-        copy = case lookupOptionFlag "no-copy" params of
-            Just False -> error "Invalid State"
-            Just True -> NoCopyPdf
-            Nothing -> InstallPdf
-     in return (mode, copy)
+extractMode :: Program Env (Mode, Copy)
+extractMode = do
+    mode <-
+        queryOptionFlag "watch" >>= \case
+            True -> pure Cycle
+            False -> pure Once
+
+    copy <-
+        queryOptionFlag "no-copy" >>= \case
+            True -> pure NoCopyPdf
+            False -> pure InstallPdf
+
+    pure (mode, copy)
 
 {-
 For the situation where the .book file is in a location other than '.'
 then chdir there first, so any relative paths within _it_ are handled
 properly, as are inotify watches later if they are employed.
 -}
-extractBookFile :: Parameters -> Program Env FilePath
-extractBookFile params =
-    let (relative, bookfile) = case lookupArgument "bookfile" params of
-            Nothing -> error "invalid"
-            Just file -> splitFileName file
-     in do
-            debugS "relative" relative
-            debugS "bookfile" bookfile
-            probe <- liftIO $ do
-                changeWorkingDirectory relative
-                doesFileExist bookfile
-            case probe of
-                True -> return bookfile
-                False -> do
-                    write ("error: specified .book file \"" <> intoRope bookfile <> "\" not found.")
-                    throw (userError "no such file")
+extractBookFile :: Program Env FilePath
+extractBookFile = do
+    file <- queryArgument "bookfile"
+    let (relative, bookfile) = splitFileName (fromRope file)
+
+    debugS "relative" relative
+    debugS "bookfile" bookfile
+    probe <- liftIO $ do
+        changeWorkingDirectory relative
+        doesFileExist bookfile
+    case probe of
+        True -> return bookfile
+        False -> do
+            write ("error: specified .book file \"" <> intoRope bookfile <> "\" not found.")
+            throw (userError "no such file")
 
 setupTargetFile :: FilePath -> Program Env ()
 setupTargetFile file = do
@@ -224,17 +225,16 @@ setupPreambleFile = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
 
-    params <- getCommandLine
-    first <- case lookupOptionFlag "builtin-preamble" params of
-        Nothing -> return []
-        Just True -> do
-            let name = "00_Preamble.latex"
-            let target = tmpdir ++ "/" ++ name
-            liftIO $
-                withFile target WriteMode $ \handle -> do
-                    hWrite handle preamble
-            return [name]
-        Just _ -> invalid
+    first <-
+        queryOptionFlag "builtin-preamble" >>= \case
+            False -> return []
+            True -> do
+                let name = "00_Preamble.latex"
+                let target = tmpdir ++ "/" ++ name
+                liftIO $
+                    withFile target WriteMode $ \handle -> do
+                        hWrite handle preamble
+                return [name]
 
     let env' = env{intermediateFilenamesFrom = first}
     setApplicationState env'
@@ -246,9 +246,9 @@ specifying neither -p nor a preamble in the bookfile.
 -}
 validatePreamble :: Bookfile -> Program Env ()
 validatePreamble book = do
-    params <- getCommandLine
     let preambles = preamblesFrom book
-    let builtin = isJust (lookupOptionFlag "builtin-preamble" params)
+
+    builtin <- queryOptionFlag "builtin-preamble"
 
     if List.null preambles && not builtin
         then do
