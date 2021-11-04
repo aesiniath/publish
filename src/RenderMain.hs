@@ -6,6 +6,7 @@
 module Main where
 
 import Core.Program
+import Core.Telemetry
 import Core.Text
 import Environment (initial)
 import RenderDocument (program)
@@ -83,4 +84,6 @@ main = do
                 ]
             )
 
-    executeWith context program
+    context' <- initializeTelemetry [consoleExporter, structuredExporter, honeycombExporter] context
+
+    executeWith context' program

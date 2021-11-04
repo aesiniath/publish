@@ -4,7 +4,6 @@
 
 module Utilities (
     ensureDirectory,
-    execProcess,
     ifNewer,
     isNewer,
 ) where
@@ -13,17 +12,13 @@ import Chrono.Compat (convertToUTC)
 import Control.Monad (when)
 import Core.Program
 import Core.System
-import Core.Text
-import qualified Data.List as List (intercalate)
 import System.Directory (
     createDirectoryIfMissing,
     doesDirectoryExist,
     doesFileExist,
     getModificationTime,
  )
-import System.Exit (ExitCode (..))
 import System.FilePath.Posix (takeDirectory)
-import System.Process.Typed (closed, proc, readProcess, setStdin)
 
 {-
 Some source files live in subdirectories. Replicate that directory
@@ -36,28 +31,6 @@ ensureDirectory target =
             probe <- doesDirectoryExist subdir
             when (not probe) $ do
                 createDirectoryIfMissing True subdir
-
-{-
-Thin wrapper around **typed-process**'s `readProcess` so that the command
-to be executed can be logged. Bit of an annoyance that the command and the
-arguments have to be specified to `proc` separately, but that's _execvp(3)_
-for you.
-
-TODO this could potentially move to the **unbeliever** library
--}
-execProcess :: [String] -> Program t (ExitCode, Rope, Rope)
-execProcess [] = error "No command provided"
-execProcess (cmd : args) =
-    let task = proc cmd args
-        task' = setStdin closed task
-        command = List.intercalate " " (cmd : args)
-     in do
-            debugS "command" command
-
-            (exit, out, err) <- liftIO $ do
-                readProcess task'
-
-            return (exit, intoRope out, intoRope err)
 
 {- |
  If the source file is newer than the target file, then run an action. For

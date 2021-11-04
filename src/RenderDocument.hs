@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,10 +11,10 @@ import Control.Monad (filterM, forM_, forever, void)
 import Core.Data
 import Core.Program
 import Core.System
+import Core.Telemetry
 import Core.Text
 import Data.Char (isSpace)
 import qualified Data.List as List (dropWhileEnd, null)
-import Data.Maybe (isJust)
 import qualified Data.Text.IO as T
 import Environment (Bookfile (..), Env (..))
 import LatexOutputReader (parseOutputForError)
@@ -50,7 +51,7 @@ import Text.Pandoc (
     writeLaTeX,
     writerTopLevelDivision,
  )
-import Utilities (ensureDirectory, execProcess, ifNewer, isNewer)
+import Utilities (ensureDirectory, ifNewer, isNewer)
 
 data Mode = Once | Cycle
 
@@ -58,11 +59,10 @@ data Copy = InstallPdf | NoCopyPdf
 
 program :: Program Env ()
 program = do
-    params <- getCommandLine
-    (mode, copy) <- extractMode params
+    (mode, copy) <- extractMode
 
     info "Identify .book file"
-    bookfile <- extractBookFile params
+    bookfile <- extractBookFile
 
     case mode of
         Once -> do
@@ -74,46 +74,58 @@ program = do
 
 renderDocument :: (Mode, Copy) -> FilePath -> Program Env [FilePath]
 renderDocument (mode, copy) file = do
-    info "Read .book file"
-    book <- processBookFile file
+    setServiceName "render"
+    beginTrace $ do
+        encloseSpan "Render document" $ do
+            telemetry
+                [ metric "bookfile" file
+                ]
 
-    info "Setup temporary directory"
-    setupTargetFile file
-    setupPreambleFile
-    validatePreamble book
+            book <- encloseSpan "Setup" $ do
+                info "Read .book file"
+                book <- processBookFile file
 
-    let preambles = preamblesFrom book
-    let fragments = fragmentsFrom book
-    let trailers = trailersFrom book
+                info "Setup temporary directory"
+                setupTargetFile file
+                setupPreambleFile
+                validatePreamble book
 
-    info "Convert preamble fragments and begin marker to LaTeX"
-    mapM_ processFragment preambles
-    setupBeginningFile
+                pure book
 
-    info "Convert document fragments to LaTeX"
-    mapM_ processFragment fragments
+            let preambles = preamblesFrom book
+            let fragments = fragmentsFrom book
+            let trailers = trailersFrom book
 
-    info "Convert end marker and trailing fragments to LaTeX"
-    setupEndingFile
-    mapM_ processFragment trailers
+            encloseSpan "Convert fragments" $ do
+                info "Convert preamble fragments and begin marker to LaTeX"
+                mapM_ processFragment preambles
+                setupBeginningFile
 
-    info "Write intermediate LaTeX file"
-    produceResult
+                info "Convert document fragments to LaTeX"
+                mapM_ processFragment fragments
 
-    info "Render document to PDF"
-    catch
-        ( do
-            renderPDF
-            case copy of
-                InstallPdf -> copyHere
-                NoCopyPdf -> return ()
-        )
-        ( \(e :: ExitCode) -> case mode of
-            Once -> throw e
-            Cycle -> return ()
-        )
+                info "Convert end marker and trailing fragments to LaTeX"
+                setupEndingFile
+                mapM_ processFragment trailers
 
-    return (uniqueList file preambles fragments trailers)
+                info "Write intermediate LaTeX file"
+                produceResult
+
+            encloseSpan "Render LaTeX to PDF" $ do
+                info "Render document to PDF"
+                catch
+                    ( do
+                        renderPDF
+                        case copy of
+                            InstallPdf -> copyHere
+                            NoCopyPdf -> return ()
+                    )
+                    ( \(e :: ExitCode) -> case mode of
+                        Once -> throw e
+                        Cycle -> return ()
+                    )
+
+            pure (uniqueList file preambles fragments trailers)
 
 --
 -- Quickly reduce the fragment names to a unique list so we don't waste
@@ -124,39 +136,40 @@ uniqueList file preambles fragments trailers =
     let files = insertElement file (intoSet trailers <> (intoSet preambles <> intoSet fragments))
      in fromSet files
 
-extractMode :: Parameters -> Program Env (Mode, Copy)
-extractMode params =
-    let mode = case lookupOptionFlag "watch" params of
-            Just False -> error "Invalid State"
-            Just True -> Cycle
-            Nothing -> Once
-        copy = case lookupOptionFlag "no-copy" params of
-            Just False -> error "Invalid State"
-            Just True -> NoCopyPdf
-            Nothing -> InstallPdf
-     in return (mode, copy)
+extractMode :: Program Env (Mode, Copy)
+extractMode = do
+    mode <-
+        queryOptionFlag "watch" >>= \case
+            True -> pure Cycle
+            False -> pure Once
+
+    copy <-
+        queryOptionFlag "no-copy" >>= \case
+            True -> pure NoCopyPdf
+            False -> pure InstallPdf
+
+    pure (mode, copy)
 
 {-
 For the situation where the .book file is in a location other than '.'
 then chdir there first, so any relative paths within _it_ are handled
 properly, as are inotify watches later if they are employed.
 -}
-extractBookFile :: Parameters -> Program Env FilePath
-extractBookFile params =
-    let (relative, bookfile) = case lookupArgument "bookfile" params of
-            Nothing -> error "invalid"
-            Just file -> splitFileName file
-     in do
-            debugS "relative" relative
-            debugS "bookfile" bookfile
-            probe <- liftIO $ do
-                changeWorkingDirectory relative
-                doesFileExist bookfile
-            case probe of
-                True -> return bookfile
-                False -> do
-                    write ("error: specified .book file \"" <> intoRope bookfile <> "\" not found.")
-                    throw (userError "no such file")
+extractBookFile :: Program Env FilePath
+extractBookFile = do
+    file <- queryArgument "bookfile"
+    let (relative, bookfile) = splitFileName (fromRope file)
+
+    debugS "relative" relative
+    debugS "bookfile" bookfile
+    probe <- liftIO $ do
+        changeWorkingDirectory relative
+        doesFileExist bookfile
+    case probe of
+        True -> return bookfile
+        False -> do
+            write ("error: specified .book file \"" <> intoRope bookfile <> "\" not found.")
+            throw (userError "no such file")
 
 setupTargetFile :: FilePath -> Program Env ()
 setupTargetFile file = do
@@ -164,13 +177,12 @@ setupTargetFile file = do
     let start = startingDirectoryFrom env
     let dotfile = start ++ "/.target"
 
-    params <- getCommandLine
-    tmpdir <- case lookupOptionValue "temp" params of
+    tmpdir <- queryOptionValue "temp" >>= \case
         Just dir -> do
             -- Append a slash so that /tmp/booga is taken as a directory.
             -- Otherwise, you end up ensuring /tmp exists.
-            ensureDirectory (dir ++ "/")
-            return dir
+            ensureDirectory (fromRope dir ++ "/")
+            return (fromRope dir)
         Nothing ->
             liftIO $
                 catch
@@ -211,17 +223,16 @@ setupPreambleFile = do
     env <- getApplicationState
     let tmpdir = tempDirectoryFrom env
 
-    params <- getCommandLine
-    first <- case lookupOptionFlag "builtin-preamble" params of
-        Nothing -> return []
-        Just True -> do
-            let name = "00_Preamble.latex"
-            let target = tmpdir ++ "/" ++ name
-            liftIO $
-                withFile target WriteMode $ \handle -> do
-                    hWrite handle preamble
-            return [name]
-        Just _ -> invalid
+    first <-
+        queryOptionFlag "builtin-preamble" >>= \case
+            False -> return []
+            True -> do
+                let name = "00_Preamble.latex"
+                let target = tmpdir ++ "/" ++ name
+                liftIO $
+                    withFile target WriteMode $ \handle -> do
+                        hWrite handle preamble
+                return [name]
 
     let env' = env{intermediateFilenamesFrom = first}
     setApplicationState env'
@@ -233,9 +244,9 @@ specifying neither -p nor a preamble in the bookfile.
 -}
 validatePreamble :: Bookfile -> Program Env ()
 validatePreamble book = do
-    params <- getCommandLine
     let preambles = preamblesFrom book
-    let builtin = isJust (lookupOptionFlag "builtin-preamble" params)
+
+    builtin <- queryOptionFlag "builtin-preamble"
 
     if List.null preambles && not builtin
         then do
@@ -363,28 +374,33 @@ convertMarkdown file =
                 { writerTopLevelDivision = TopLevelSection
                 }
      in do
-            env <- getApplicationState
-            let tmpdir = tempDirectoryFrom env
-                file' = replaceExtension file ".latex"
-                target = tmpdir ++ "/" ++ file'
-                files = intermediateFilenamesFrom env
+            encloseSpan "convertMarkdown" $ do
+                env <- getApplicationState
+                let tmpdir = tempDirectoryFrom env
+                    file' = replaceExtension file ".latex"
+                    target = tmpdir ++ "/" ++ file'
+                    files = intermediateFilenamesFrom env
 
-            ensureDirectory target
-            ifNewer file target $ do
-                debugS "target" target
-                liftIO $ do
-                    contents <- T.readFile file
+                ensureDirectory target
+                ifNewer file target $ do
+                    debugS "target" target
+                    liftIO $ do
+                        contents <- T.readFile file
 
-                    latex <- runIOorExplode $ do
-                        parsed <- readMarkdown readingOptions contents
-                        writeLaTeX writingOptions parsed
+                        latex <- runIOorExplode $ do
+                            parsed <- readMarkdown readingOptions contents
+                            writeLaTeX writingOptions parsed
 
-                    withFile target WriteMode $ \handle -> do
-                        T.hPutStrLn handle latex
-                        T.hPutStr handle "\n"
+                        withFile target WriteMode $ \handle -> do
+                            T.hPutStrLn handle latex
+                            T.hPutStr handle "\n"
 
-            let env' = env{intermediateFilenamesFrom = file' : files}
-            setApplicationState env'
+                let env' = env{intermediateFilenamesFrom = file' : files}
+                setApplicationState env'
+
+                telemetry
+                    [ metric "file" file
+                    ]
 
 {-
 If a source fragment is already LaTeX, simply copy it through to
@@ -392,19 +408,23 @@ the target file.
 -}
 passthroughLaTeX :: FilePath -> Program Env ()
 passthroughLaTeX file = do
-    env <- getApplicationState
-    let tmpdir = tempDirectoryFrom env
-        target = tmpdir ++ "/" ++ file
-        files = intermediateFilenamesFrom env
+    encloseSpan "passthroughLaTeX" $ do
+        env <- getApplicationState
+        let tmpdir = tempDirectoryFrom env
+            target = tmpdir ++ "/" ++ file
+            files = intermediateFilenamesFrom env
 
-    ensureDirectory target
-    ifNewer file target $ do
-        debugS "target" target
-        liftIO $ do
-            copyFileWithMetadata file target
+        ensureDirectory target
+        ifNewer file target $ do
+            debugS "target" target
+            liftIO $ do
+                copyFileWithMetadata file target
 
-    let env' = env{intermediateFilenamesFrom = file : files}
-    setApplicationState env'
+        let env' = env{intermediateFilenamesFrom = file : files}
+        setApplicationState env'
+        telemetry
+            [ metric "file" file
+            ]
 
 {-
 Images in SVG format need to be converted to PDF to be able to be
@@ -413,45 +433,53 @@ is slightly shocking.
 -}
 convertImage :: FilePath -> Program Env ()
 convertImage file = do
-    env <- getApplicationState
-    let tmpdir = tempDirectoryFrom env
-        basepath = dropExtension file
-        target = tmpdir ++ "/" ++ basepath ++ ".pdf"
-        buffer = tmpdir ++ "/" ++ basepath ++ "~tmp.pdf"
-        inkscape =
-            [ "inkscape"
-            , "--export-type=pdf"
-            , "--export-filename=" ++ buffer
-            , file
+    encloseSpan "convertImage" $ do
+        telemetry
+            [ metric "file" file
             ]
+        env <- getApplicationState
+        let tmpdir = tempDirectoryFrom env
+            basepath = dropExtension file
+            target = tmpdir ++ "/" ++ basepath ++ ".pdf"
+            buffer = tmpdir ++ "/" ++ basepath ++ "~tmp.pdf"
+            inkscape =
+                [ "inkscape"
+                , "--export-type=pdf"
+                , "--export-filename=" ++ buffer
+                , file
+                ]
 
-    ifNewer file target $ do
-        debugS "target" target
-        (exit, out, err) <- do
-            ensureDirectory target
-            execProcess inkscape
+        ifNewer file target $ do
+            debugS "target" target
+            (exit, out, err) <- do
+                ensureDirectory target
+                execProcess (fmap intoRope inkscape)
 
-        case exit of
-            ExitFailure _ -> do
-                info "Image processing failed"
-                debug "stderr" (intoRope err)
-                debug "stdout" (intoRope out)
-                write ("error: Unable to convert " <> intoRope file <> " from SVG to PDF")
-                throw exit
-            ExitSuccess -> liftIO $ do
-                renameFile buffer target
+            case exit of
+                ExitFailure _ -> do
+                    info "Image processing failed"
+                    debug "stderr" (intoRope err)
+                    debug "stdout" (intoRope out)
+                    write ("error: Unable to convert " <> intoRope file <> " from SVG to PDF")
+                    throw exit
+                ExitSuccess -> liftIO $ do
+                    renameFile buffer target
 
 passthroughImage :: FilePath -> Program Env ()
 passthroughImage file = do
-    env <- getApplicationState
-    let tmpdir = tempDirectoryFrom env
-        target = tmpdir ++ "/" ++ file
+    encloseSpan "passthroughImage" $ do
+        telemetry
+            [ metric "file" file
+            ]
+        env <- getApplicationState
+        let tmpdir = tempDirectoryFrom env
+            target = tmpdir ++ "/" ++ file
 
-    ensureDirectory target
-    ifNewer file target $ do
-        debugS "target" target
-        liftIO $ do
-            copyFileWithMetadata file target
+        ensureDirectory target
+        ifNewer file target $ do
+            debugS "target" target
+            liftIO $ do
+                copyFileWithMetadata file target
 
 {-
 Finish up by writing the intermediate "master" file.
@@ -470,38 +498,40 @@ produceResult = do
                 let (path, name) = splitFileName file
                 hPutStrLn handle ("\\subimport{" ++ path ++ "}{" ++ name ++ "}")
 
-getUserID :: Program a String
+getUserID :: Program a Rope
 getUserID = liftIO $ do
     uid <- getEffectiveUserID
     gid <- getEffectiveGroupID
-    return (show uid ++ ":" ++ show gid)
+    return (intoRope (show uid ++ ":" ++ show gid))
 
 renderPDF :: Program Env ()
 renderPDF = do
     env <- getApplicationState
 
-    let master = masterFilenameFrom env
-        tmpdir = tempDirectoryFrom env
+    let master = intoRope (masterFilenameFrom env)
+        tmpdir = intoRope (tempDirectoryFrom env)
 
     user <- getUserID
 
-    params <- getCommandLine
-    let command = case lookupOptionValue "docker" params of
+    command <-
+        queryOptionValue "docker" >>= \case
             Just image ->
-                [ "docker"
-                , "run"
-                , "--rm=true"
-                , "--volume=" ++ tmpdir ++ ":" ++ tmpdir
-                , "--user=" ++ user
-                , image
-                , "latexmk"
-                ]
+                pure
+                    [ "docker"
+                    , "run"
+                    , "--rm=true"
+                    , "--volume=" <> tmpdir <> ":" <> tmpdir
+                    , "--user=" <> user
+                    , intoRope image
+                    , "latexmk"
+                    ]
             Nothing ->
-                [ "latexmk"
-                ]
-        options =
+                pure
+                    [ "latexmk"
+                    ]
+    let options =
             [ "-lualatex"
-            , "-output-directory=" ++ tmpdir
+            , "-output-directory=" <> tmpdir
             , "-interaction=nonstopmode"
             , "-halt-on-error"
             , "-file-line-error"
@@ -514,9 +544,9 @@ renderPDF = do
     case exit of
         ExitFailure _ -> do
             info "Render failed"
-            debug "stderr" (intoRope err)
-            debug "stdout" (intoRope out)
-            write (parseOutputForError tmpdir out)
+            debug "stderr" err
+            debug "stdout" out
+            write (parseOutputForError (fromRope tmpdir) out)
             throw exit
         ExitSuccess -> return ()
 
@@ -537,3 +567,7 @@ copyHere = do
             info "Complete"
         False -> do
             info "Result unchanged"
+
+    telemetry
+        [ metric "changed" changed
+        ]
