@@ -5,6 +5,6 @@ packages:
 
 extra-deps:
  - core-text-0.3.5.0
- - core-data-0.3.0.1
- - core-program-0.3.2.0
- - core-telemetry-0.1.7.2
+ - core-data-0.3.0.2
+ - core-program-0.3.4.0
+ - core-telemetry-0.1.7.3
