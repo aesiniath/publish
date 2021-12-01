@@ -1,10 +1,10 @@
-resolver: lts-18.15
+resolver: lts-18.16
 
 packages:
   - .
 
 extra-deps:
- - core-text-0.3.5.0
- - core-data-0.3.0.2
- - core-program-0.3.4.0
- - core-telemetry-0.1.7.3
+  - core-text-0.3.5.0
+  - core-data-0.3.0.2
+  - core-program-0.4.2.0
+  - core-telemetry-0.1.7.3
