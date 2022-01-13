@@ -1,4 +1,4 @@
-resolver: lts-18.16
+resolver: lts-18.21
 
 packages:
   - .
@@ -7,4 +7,4 @@ extra-deps:
   - core-text-0.3.5.0
   - core-data-0.3.0.2
   - core-program-0.4.2.0
-  - core-telemetry-0.1.7.3
+  - core-telemetry-0.1.8.1
