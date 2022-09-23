@@ -9,6 +9,7 @@ module PandocToMarkdown (
     tableToMarkdown,
 ) where
 
+import qualified Control.Exception.Safe as Safe (impureThrow)
 import Core.System.Base
 import Core.Text
 import Data.Foldable (foldl')
@@ -275,7 +276,7 @@ tableToMarkdown _ _ alignments thead tbodys _ =
 
     headerToMarkdown :: TableHead -> Rope
     headerToMarkdown (TableHead _ [row]) = rowToMarkdown row
-    headerToMarkdown _ = impureThrow (NotSafe "What do we do with this TableHead?")
+    headerToMarkdown _ = Safe.impureThrow (NotSafe "What do we do with this TableHead?")
 
     columnToMarkdown :: (Alignment, ColWidth) -> Rope
     columnToMarkdown (align, col) =
@@ -317,13 +318,13 @@ tableToMarkdown _ _ alignments thead tbodys _ =
     cellToMarkdown (Cell _ _ (RowSpan 1) (ColSpan 1) [block]) =
         convert block
     cellToMarkdown _ =
-        impureThrow (NotSafe "Multiple Blocks encountered")
+        Safe.impureThrow (NotSafe "Multiple Blocks encountered")
 
     convert :: Block -> Rope
     convert (Plain inlines) =
         plaintextToMarkdown 100000 inlines
     convert _ =
-        impureThrow (NotSafe "Incorrect Block type encountered")
+        Safe.impureThrow (NotSafe "Incorrect Block type encountered")
 
 data NotSafe = NotSafe String
     deriving (Show)

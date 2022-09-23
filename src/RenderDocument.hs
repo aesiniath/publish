@@ -1,3 +1,4 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -7,6 +8,7 @@ module RenderDocument (
     program,
 ) where
 
+import Control.Exception.Safe qualified as Safe
 import Control.Monad (filterM, forM_, forever, void)
 import Core.Data
 import Core.Program
@@ -14,8 +16,8 @@ import Core.System
 import Core.Telemetry
 import Core.Text
 import Data.Char (isSpace)
-import qualified Data.List as List (dropWhileEnd, null)
-import qualified Data.Text.IO as T
+import Data.List qualified as List (dropWhileEnd, null)
+import Data.Text.IO qualified as T
 import Environment (Bookfile (..), Env (..))
 import LatexOutputReader (parseOutputForError)
 import LatexPreamble (beginning, ending, preamble)
@@ -177,28 +179,29 @@ setupTargetFile file = do
     let start = startingDirectoryFrom env
     let dotfile = start ++ "/.target"
 
-    tmpdir <- queryOptionValue "temp" >>= \case
-        Just dir -> do
-            -- Append a slash so that /tmp/booga is taken as a directory.
-            -- Otherwise, you end up ensuring /tmp exists.
-            ensureDirectory (fromRope dir ++ "/")
-            return (fromRope dir)
-        Nothing ->
-            liftIO $
-                catch
-                    ( do
-                        dir' <- readFile dotfile
-                        let dir = trim dir'
-                        probe <- doesDirectoryExist dir
-                        if probe
-                            then return dir
-                            else throw boom
-                    )
-                    ( \(_ :: IOError) -> do
-                        dir <- mkdtemp "/tmp/publish-"
-                        writeFile dotfile (dir ++ "\n")
-                        return dir
-                    )
+    tmpdir <-
+        queryOptionValue "temp" >>= \case
+            Just dir -> do
+                -- Append a slash so that /tmp/booga is taken as a directory.
+                -- Otherwise, you end up ensuring /tmp exists.
+                ensureDirectory (fromRope dir ++ "/")
+                return (fromRope dir)
+            Nothing ->
+                liftIO $
+                    Safe.catch
+                        ( do
+                            dir' <- readFile dotfile
+                            let dir = trim dir'
+                            probe <- doesDirectoryExist dir
+                            if probe
+                                then return dir
+                                else Safe.throw boom
+                        )
+                        ( \(_ :: IOError) -> do
+                            dir <- mkdtemp "/tmp/publish-"
+                            writeFile dotfile (dir ++ "\n")
+                            return dir
+                        )
     debugS "tmpdir" tmpdir
 
     let master = tmpdir ++ "/" ++ base ++ ".tex"
