@@ -1,9 +1,6 @@
-resolver: nightly-2022-09-28
+resolver: lts-20.4
+compiler: ghc-9.2.4
 packages:
 - .
 
-extra-deps:
-- core-data-0.3.6.0
-- core-program-0.5.2.0
-- core-text-0.3.8.0
-- core-telemetry-0.2.6.0
+extra-deps: []

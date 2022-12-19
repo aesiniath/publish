@@ -1,5 +1,5 @@
 name: publish
-version: 2.5.1
+version: 2.5.2
 synopsis: Publishing tools for papers, books, and presentations
 description: |
   Tools for rendering markdown-centric documents into PDFs. There are two
