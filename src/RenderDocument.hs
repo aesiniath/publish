@@ -456,7 +456,7 @@ convertImage file = do
             debugS "target" target
             (exit, out, err) <- do
                 ensureDirectory target
-                execProcess (fmap intoRope inkscape)
+                readProcess (fmap intoRope inkscape)
 
             case exit of
                 ExitFailure _ -> do
@@ -543,7 +543,7 @@ renderPDF = do
             ]
         latexmk = command ++ options
 
-    (exit, out, err) <- execProcess latexmk
+    (exit, out, err) <- readProcess latexmk
     case exit of
         ExitFailure _ -> do
             info "Render failed"

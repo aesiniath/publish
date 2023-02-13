@@ -1,5 +1,5 @@
 name: publish
-version: 2.5.2
+version: 2.5.3
 synopsis: Publishing tools for papers, books, and presentations
 description: |
   Tools for rendering markdown-centric documents into PDFs. There are two
@@ -19,9 +19,9 @@ license: MIT
 license-file: LICENSE
 author: Andrew Cowie <istathar@gmail.com>
 maintainer: Andrew Cowie <istathar@gmail.com>
-copyright: © 2016-2021 Athae Eredh Siniath and Others
+copyright: © 2016-2023 Athae Eredh Siniath and Others
 category: Text
-tested-with: GHC == 8.10.7
+tested-with: GHC == 9.2.5
 github: aesiniath/publish
 
 dependencies:
@@ -39,8 +39,8 @@ dependencies:
  - typed-process
  - core-text >= 0.3.4
  - core-data
- - core-program >= 0.3.1
- - core-telemetry >= 0.1.7.2
+ - core-program >= 0.6.5
+ - core-telemetry >= 0.2.7
  - safe-exceptions
  - unix
  - unordered-containers

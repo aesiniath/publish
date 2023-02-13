@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -41,12 +42,8 @@ program = do
 
 getFragmentName :: Program None FilePath
 getFragmentName = do
-    params <- getCommandLine
-
-    let fragment = case lookupArgument "document" params of
-            Nothing -> error "invalid"
-            Just file -> file
-    return fragment
+    fragment <- queryArgument "document"
+    pure (fromRope fragment)
 
 loadFragment :: FilePath -> Program None Pandoc
 loadFragment file =
@@ -83,12 +80,10 @@ writeResult file doc =
     let contents' = pandocToMarkdown doc
         result = file ++ "~tmp"
      in do
-            params <- getCommandLine
-
-            let mode = case lookupOptionFlag "inplace" params of
-                    Just False -> error "Invalid State"
-                    Just True -> Inplace
-                    Nothing -> Console
+            mode <-
+                queryOptionFlag "inplace" >>= \case
+                    True -> pure Inplace
+                    False -> pure Console
 
             case mode of
                 Inplace -> liftIO $ do
