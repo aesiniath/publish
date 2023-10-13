@@ -8,8 +8,8 @@ module Utilities (
     isNewer,
 ) where
 
-import Chrono.Compat (convertToUTC)
 import Control.Monad (when)
+import Core.Data
 import Core.Program
 import Core.System
 import System.Directory (
@@ -61,5 +61,5 @@ isNewer source target = liftIO $ do
     time2 <-
         doesFileExist target >>= \case
             True -> getModificationTime target
-            False -> return (convertToUTC 0) -- the epoch
+            False -> return (fromTime epochTime)
     return (time1 > time2)

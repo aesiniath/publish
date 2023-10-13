@@ -61,7 +61,6 @@ convertBlock margin block =
             Plain inlines -> plaintextToMarkdown margin inlines
             Para inlines -> paragraphToMarkdown margin inlines
             Header level _ inlines -> headingToMarkdown level inlines
-            Null -> emptyRope
             RawBlock (Format "tex") string -> intoRope string <> "\n"
             RawBlock (Format "html") string -> intoRope string <> "\n"
             RawBlock _ _ -> error msg
@@ -74,6 +73,7 @@ convertBlock margin block =
             HorizontalRule -> "---\n"
             Table attr caption alignments header rows footer -> tableToMarkdown attr caption alignments header rows footer
             Div attr blocks -> divToMarkdown margin attr blocks
+            Figure _ _ _ -> error msg
 
 {-
 This does **not** emit a newline at the end. The intersperse happening in
