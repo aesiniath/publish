@@ -4,4 +4,4 @@ packages:
 - .
 
 extra-deps:
-- core-program-0.6.9.4
+- core-program-0.7.0.0
