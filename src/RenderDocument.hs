@@ -445,10 +445,12 @@ convertImage file = do
             basepath = dropExtension file
             target = tmpdir ++ "/" ++ basepath ++ ".pdf"
             buffer = tmpdir ++ "/" ++ basepath ++ "~tmp.pdf"
-            inkscape =
-                [ "inkscape"
-                , "--export-type=pdf"
-                , "--export-filename=" ++ buffer
+            convert =
+                [ "rsvg-convert"
+                , "--format"
+                , "pdf"
+                , "--output"
+                , buffer
                 , file
                 ]
 
@@ -456,7 +458,7 @@ convertImage file = do
             debugS "target" target
             (exit, out, err) <- do
                 ensureDirectory target
-                readProcess (fmap intoRope inkscape)
+                readProcess (fmap intoRope convert)
 
             case exit of
                 ExitFailure _ -> do
