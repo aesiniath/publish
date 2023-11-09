@@ -153,12 +153,10 @@ beginning =
 \newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
 
 %
-% avoid problems with \sout in headers with hyperref:
+% Enable strikeout (specifically the \st command)
 %
 
-\usepackage[normalem]{ulem}
-\pdfstringdefDisableCommands{\renewcommand{\sout}{}}
-
+\usepackage{soul}
 |]
     <> "\\hypersetup{pdfproducer={Markdown and Latex rendered via Publish "
     <> intoRope (versionNumberFrom version)
