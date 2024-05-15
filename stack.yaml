@@ -1,7 +1,6 @@
-resolver: lts-21.23
-compiler: ghc-9.4.8
+resolver: lts-22.22
+compiler: ghc-9.6.4
 packages:
 - .
-
-extra-deps:
-- core-program-0.7.0.0
+ghc-options:
+  HsOpenSSL: -optc=-Wno-incompatible-pointer-types
